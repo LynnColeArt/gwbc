@@ -5,8 +5,21 @@ comptime {
 }
 
 const Runtime = struct {
+    const Loop = struct {
+        line: u16,
+        limit: i16,
+        step: i16,
+
+        fn includes(self: Loop, value: i16) bool {
+            if (self.step == 0) return true;
+            return if (self.step > 0) value <= self.limit else value >= self.limit;
+        }
+    };
+
     io: std.Io,
+    stdin: std.Io.File.Reader,
     variables: [26]i16 = @splat(0),
+    loops: [26]?Loop = @splat(null),
     file: ?std.Io.File = null,
     record: [128]u8 = @splat(0),
     used: usize = 0,
@@ -23,7 +36,8 @@ const Runtime = struct {
         self.file = null;
     }
 
-    fn write(self: *Runtime, bytes: []const u8) !void {
+    fn output(self: *Runtime, to_file: bool, bytes: []const u8) !void {
+        if (!to_file) return std.Io.File.stdout().writeStreamingAll(self.io, bytes);
         const file = self.file orelse return error.FileNotOpen;
         for (bytes) |byte| {
             self.record[self.used] = byte;
@@ -35,21 +49,60 @@ const Runtime = struct {
         }
     }
 
-    fn text(self: *Runtime, value: []const u8) !void {
-        try self.write(value);
-        try self.write("\r\n");
+    fn newline(self: *Runtime, to_file: bool) !void {
+        try self.output(to_file, if (to_file) "\r\n" else "\n");
     }
 
-    fn number(self: *Runtime, value: i16) !void {
+    fn number(self: *Runtime, to_file: bool, value: i16) !void {
         var buffer: [12]u8 = undefined;
-        if (value >= 0) try self.write(" ");
-        try self.write(try std.fmt.bufPrint(&buffer, "{d} \r\n", .{value}));
+        if (value >= 0) try self.output(to_file, " ");
+        try self.output(to_file, try std.fmt.bufPrint(&buffer, "{d} ", .{value}));
+    }
+
+    fn input(self: *Runtime, prompt: []const u8, question: bool) !i16 {
+        // The terminal supplies its own input echo. Reproduce it for pipes/files.
+        const echo = !try std.Io.File.stdin().isTty(self.io);
+        while (true) {
+            try self.output(false, prompt);
+            if (question) try self.output(false, "? ");
+            const line = try self.stdin.interface.takeDelimiter('\n') orelse return error.EndOfInput;
+            const response = if (std.mem.endsWith(u8, line, "\r")) line[0 .. line.len - 1] else line;
+            if (echo) {
+                try self.output(false, response);
+                try self.newline(false);
+            }
+            const trimmed = std.mem.trim(u8, response, " ");
+            if (trimmed.len == 0) return 0;
+            const digits = if (trimmed[0] == '+' or trimmed[0] == '-') trimmed[1..] else trimmed;
+            if (digits.len != 0 and std.mem.findNone(u8, digits, "0123456789") == null) {
+                return std.fmt.parseInt(i16, trimmed, 10);
+            }
+            try self.output(false, "?Redo from start\n");
+        }
+    }
+
+    fn beginLoop(self: *Runtime, index: u8, line: u16, start: i16, limit: i16, step: i16) bool {
+        const loop = Loop{ .line = line, .limit = limit, .step = step };
+        self.variables[index] = start;
+        const enters = loop.includes(start);
+        self.loops[index] = if (enters) loop else null;
+        return enters;
+    }
+
+    fn nextLoop(self: *Runtime, index: u8, line: u16) !bool {
+        const loop = self.loops[index] orelse return error.NextWithoutFor;
+        if (loop.line != line) return error.NextWithoutFor;
+        const value = try std.math.add(i16, self.variables[index], loop.step);
+        self.variables[index] = value;
+        if (loop.includes(value)) return true;
+        self.loops[index] = null;
+        return false;
     }
 
     fn close(self: *Runtime) !void {
         const file = self.file orelse return error.FileNotOpen;
         defer self.release();
-        try self.write("\x1a");
+        try self.output(true, "\x1a");
         // GW-BASIC reuses the last record as the buffer for the next one.
         if (self.used != 0) try file.writeStreamingAll(self.io, &self.record);
     }

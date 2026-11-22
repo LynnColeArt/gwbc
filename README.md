@@ -1,55 +1,79 @@
 # GW-BASIC native compiler experiment
 
-`gwbc` compiles a subset of line-numbered GW-BASIC into native Linux x86-64
-executables. The Zig front end parses the source, resolves BASIC line targets,
-and generates Zig control flow and runtime calls. Zig 0.16.0 builds the native
-executable. The executable runs on its own.
+`gwbc` compiles a subset of line-numbered GW-BASIC into standalone Linux x86-64
+executables. The Zig front end parses source, resolves BASIC line targets and
+loop pairs, and generates Zig control flow and runtime calls. Zig 0.16.0 builds
+the executable.
 
-From the Ziggify repository root, build the compiler and try a small program:
+## Compile and run the weekly-hours tally
+
+[hours.bas](hours.bas) asks for the number of days, reads the hours for each day,
+and prints their sum. From the Ziggify repository root:
 
 ```sh
 python3 examples/gwbasic/run_case.py build
-GWBC="$PWD/examples/gwbasic/zig-out/bin/gwbc"
 DEMO_DIR=$(mktemp -d)
-cd "$DEMO_DIR"
-cat > COUNT.BAS <<'BASIC'
-10 OPEN "OUT.TXT" FOR OUTPUT AS #1
-20 LET I% = -2
-30 PRINT #1,I%
-40 LET I% = I% + 1
-50 IF I% < 3 THEN 30
-60 CLOSE #1
-70 SYSTEM
-BASIC
-"$GWBC" COUNT.BAS -o count
-./count
-xxd OUT.TXT
+examples/gwbasic/zig-out/bin/gwbc examples/gwbasic/hours.bas -o "$DEMO_DIR/hours"
+"$DEMO_DIR/hours"
 ```
 
-Use `gwbc --emit-zig COUNT.BAS` to inspect the generated source. The first
-slice accepts printable ASCII, one statement per numbered line, unique line
-numbers, `REM` and apostrophe comments, one-letter signed integer variables
-such as `I%`, assignment with optional checked addition, `GOTO`, and
-`IF … < … THEN` with a line number. The program ends with a numbered
-`SYSTEM`. File output uses `OPEN "OUT.TXT" FOR OUTPUT AS #1`, `PRINT #1,`
-with a single string or integer value, and `CLOSE #1`. The runtime emits
-GW-BASIC's numeric spacing, CRLF, DOS end-of-file marker, and sequential
-file record bytes.
+A session with three days looks like this:
 
-Console I/O, tokenized and protected BASIC files, floating-point arithmetic
-and MBF, arrays, subroutines, graphics, sound, and compatibility for runtime
-error messages remain outside this slice.
+```text
+WEEKLY HOURS TOTAL
+NUMBER OF DAYS? 3
+HOURS: 8
+HOURS: 7
+HOURS: 6
+TOTAL HOURS: 21
+```
+
+Use `gwbc --emit-zig examples/gwbasic/hours.bas` to inspect the generated code.
+The executable also accepts piped input. It echoes piped answers to preserve
+the BASIC transcript and leaves terminal echo to the host on interactive runs.
+
+## Supported source
+
+Use printable ASCII with one statement per numbered line and a final
+`SYSTEM`. The compiler supports `REM` and apostrophe comments, signed 16-bit
+integers in one-letter variables such as `I%`, `LET` with optional checked
+addition, `GOTO`, and `IF … < … THEN` with a line number. It supports
+lexically nested `FOR … TO … [STEP …]` / `NEXT` loops with distinct variables,
+optional variable names on `NEXT`, and integer literals or variables for loop
+bounds and steps.
+
+`PRINT` supports newline-terminated strings and integers separated by semicolons
+and preserves GW-BASIC's numeric spacing. `INPUT` reads one signed decimal
+integer from a line, supports an optional quoted prompt with the comma or
+semicolon separator, treats a blank answer as zero, and repeats the prompt
+after nonnumeric text. Native console I/O uses standard streams and LF.
+Sequential file output uses
+`OPEN "OUT.TXT" FOR OUTPUT AS #1`, `PRINT #1,`, and `CLOSE #1` with DOS
+CRLF, end-of-file markers, and record bytes.
+
+String and floating-point input, comma-separated output zones, trailing
+semicolons on `PRINT`, tokenized and protected program files, MBF arithmetic,
+arrays, subroutines, graphics, sound, and general runtime diagnostic parity
+remain outside the verified subset.
 
 ## Replay against the DOS reference
 
 The reference is T.K. Chia's [2026-10-05 build](https://codeberg.org/tkchia/GW-BASIC/releases/tag/20261005)
 of the [1983 Microsoft assembly release](https://github.com/microsoft/GW-BASIC).
-The runner checks the executable's SHA-256 each time and launches it in
-[DOSBox 0.74-3](https://www.dosbox.com/DOSBoxManual.html). It stages the BASIC
-source with DOS line endings and returns the complete output file to Ziggify.
-The same fixtures go through the native compiler and each resulting executable.
+The runner verifies the executable's SHA-256, stages the same BASIC source with
+DOS line endings, and launches the executable in
+[DOSBox 0.74-3](https://www.dosbox.com/DOSBoxManual.html).
 
-With DOSBox, Python 3, and Zig 0.16.0 installed, run from the repository root:
+For console fixtures, a small DOS launcher supplies scripted BIOS keystrokes and
+captures ordered text cell writes. The runner converts row changes to LF,
+retains printable bytes including spaces, and appends LF after the last visible
+row. This capture covers short screens of sequential ASCII text, including the
+interpreter's input echo. Terminal control effects and blank lines after the
+last visible row are outside the capture. File fixtures compare complete
+`OUT.TXT` bytes. Ziggify also compares exit status and both output streams.
+
+With DOSBox, GNU binutils, Python 3, and Zig 0.16.0 installed, run from the
+repository root:
 
 ```sh
 zig build -Doptimize=ReleaseSafe
@@ -62,7 +86,6 @@ unzip -p examples/gwbasic/.ziggify/oracle/GWB26A05.ZIP DEVEL/GWBASIC/GWBASIC.EXE
 ```
 
 `DOSBOX` and `GWBASIC_EXE` can point to absolute paths for local installations.
-The six fixtures cover string and integer output, a backward conditional branch,
-a forward jump, numbered execution order, and empty, exact-boundary, and
-multi-record files. Ziggify compares process status, stdout, stderr, and every
-byte of `OUT.TXT`.
+The corpus has four transcripts from `hours.bas`, one transcript for nested,
+descending, and skipped loops with a saved bound, and six file cases covering
+strings, integers, branches, line order, and record boundaries.

@@ -14,11 +14,23 @@ const Atom = union(enum) {
     }
 };
 
+const PrintValue = union(enum) {
+    text: []const u8,
+    number: Atom,
+};
+
+const Print = struct {
+    file: bool,
+    values: []const PrintValue,
+};
+
 const Statement = union(enum) {
     remark,
     open,
-    text: []const u8,
-    number: Atom,
+    print: Print,
+    input: struct { variable: u8, prompt: []const u8, question: bool },
+    for_loop: struct { variable: u8, start: Atom, limit: Atom, step: Atom },
+    next_loop: ?u8,
     assign: struct { variable: u8, value: Atom, add: ?Atom },
     jump: u16,
     branch: struct { left: Atom, right: Atom, target: u16 },
@@ -29,6 +41,7 @@ const Statement = union(enum) {
 const Line = struct {
     number: u16,
     statement: Statement,
+    loop_partner: ?usize = null,
 
     fn lessThan(_: void, left: Line, right: Line) bool {
         return left.number < right.number;
@@ -86,7 +99,32 @@ const Parser = struct {
         return .{ .literal = try std.fmt.parseInt(i16, start[0 .. start.len - self.rest.len], 10) };
     }
 
-    fn statement(self: *Parser) !Statement {
+    // The opening quote has already been consumed.
+    fn string(self: *Parser) ![]const u8 {
+        const end = std.mem.indexOfScalar(u8, self.rest, '"') orelse return error.InvalidSyntax;
+        const value = self.rest[0..end];
+        self.rest = self.rest[end + 1 ..];
+        return value;
+    }
+
+    fn printStatement(self: *Parser, allocator: Allocator) !Print {
+        const file = self.take("#1");
+        if (file) try self.require(",");
+        self.space();
+        var values: std.ArrayList(PrintValue) = .empty;
+        while (self.rest.len != 0) {
+            const value: PrintValue = if (self.take("\""))
+                .{ .text = try self.string() }
+            else
+                .{ .number = try self.atom() };
+            try values.append(allocator, value);
+            if (!self.take(";")) break;
+            if (self.rest.len == 0) return error.UnsupportedTrailingSemicolon;
+        }
+        return .{ .file = file, .values = values.items };
+    }
+
+    fn statement(self: *Parser, allocator: Allocator) !Statement {
         if (self.take("REM") or self.take("'")) {
             self.rest = "";
             return .remark;
@@ -99,14 +137,29 @@ const Parser = struct {
             try self.require("#1");
             return .open;
         }
-        if (self.take("PRINT")) {
-            try self.require("#1");
-            try self.require(",");
-            if (!self.take("\"")) return .{ .number = try self.atom() };
-            const end = std.mem.indexOfScalar(u8, self.rest, '"') orelse return error.InvalidSyntax;
-            const value = self.rest[0..end];
-            self.rest = self.rest[end + 1 ..];
-            return .{ .text = value };
+        if (self.take("PRINT")) return .{ .print = try self.printStatement(allocator) };
+        if (self.take("INPUT")) {
+            var prompt: []const u8 = "";
+            var question = true;
+            if (self.take("\"")) {
+                prompt = try self.string();
+                question = self.take(";");
+                if (!question) try self.require(",");
+            }
+            return .{ .input = .{ .variable = try self.variable(), .prompt = prompt, .question = question } };
+        }
+        if (self.take("FOR")) {
+            const index = try self.variable();
+            try self.require("=");
+            const start = try self.atom();
+            try self.require("TO");
+            const limit = try self.atom();
+            const step = if (self.take("STEP")) try self.atom() else Atom{ .literal = 1 };
+            return .{ .for_loop = .{ .variable = index, .start = start, .limit = limit, .step = step } };
+        }
+        if (self.take("NEXT")) {
+            self.space();
+            return .{ .next_loop = if (self.rest.len == 0) null else try self.variable() };
         }
         if (self.take("LET")) {
             const index = try self.variable();
@@ -131,27 +184,93 @@ const Parser = struct {
     }
 };
 
-fn parseLine(source: []const u8) !Line {
+fn parseLine(allocator: Allocator, source: []const u8) !Line {
     if (source.len > 255) return error.LineTooLong;
     for (source) |byte| if (byte < ' ' or byte > '~') return error.ExpectedPrintableAscii;
     var parser: Parser = .{ .rest = source };
     const number = try parser.lineNumber();
-    const statement = try parser.statement();
+    const statement = try parser.statement(allocator);
     parser.space();
     if (parser.rest.len != 0) return error.TrailingInput;
     return .{ .number = number, .statement = statement };
 }
 
-fn emitLine(out: *Writer, line: Line, next: u16) !void {
+fn pairLoops(lines: []Line, diagnostic: *Writer) !void {
+    var stack: [26]usize = undefined;
+    var depth: usize = 0;
+    for (lines, 0..) |*line, index| {
+        switch (line.statement) {
+            .for_loop => |loop| {
+                for (stack[0..depth]) |outer| {
+                    if (lines[outer].statement.for_loop.variable == loop.variable) {
+                        try diagnostic.print("BASIC line {d} reuses an enclosing FOR variable\n", .{line.number});
+                        return error.ReusedForVariable;
+                    }
+                }
+                stack[depth] = index;
+                depth += 1;
+            },
+            .next_loop => |variable| {
+                if (depth == 0) {
+                    try diagnostic.print("BASIC line {d} has NEXT without FOR\n", .{line.number});
+                    return error.NextWithoutFor;
+                }
+                depth -= 1;
+                const start = stack[depth];
+                if (variable != null and variable.? != lines[start].statement.for_loop.variable) {
+                    try diagnostic.print("BASIC line {d} does not match FOR on line {d}\n", .{ line.number, lines[start].number });
+                    return error.MismatchedNext;
+                }
+                line.loop_partner = start;
+                lines[start].loop_partner = index;
+            },
+            else => {},
+        }
+    }
+    if (depth != 0) {
+        try diagnostic.print("BASIC line {d} has FOR without NEXT\n", .{lines[stack[depth - 1]].number});
+        return error.ForWithoutNext;
+    }
+}
+
+fn emitLine(out: *Writer, lines: []const Line, index: usize) !void {
+    const line = lines[index];
+    const next = if (index + 1 < lines.len) lines[index + 1].number else 0;
     try out.print("        {d} => {{\n", .{line.number});
     switch (line.statement) {
         .remark => {},
         .open => try out.writeAll("            try runtime.open();\n"),
-        .text => |value| try out.print("            try runtime.text(\"{f}\");\n", .{std.zig.fmtString(value)}),
-        .number => |value| {
-            try out.writeAll("            try runtime.number(");
-            try value.emit(out);
-            try out.writeAll(");\n");
+        .print => |print| {
+            for (print.values) |value| switch (value) {
+                .text => |text| try out.print("            try runtime.output({}, \"{f}\");\n", .{ print.file, std.zig.fmtString(text) }),
+                .number => |number| {
+                    try out.print("            try runtime.number({}, ", .{print.file});
+                    try number.emit(out);
+                    try out.writeAll(");\n");
+                },
+            };
+            try out.print("            try runtime.newline({});\n", .{print.file});
+        },
+        .input => |input| {
+            try out.print("            runtime.variables[{d}] = try runtime.input(\"{f}\", {});\n", .{
+                input.variable, std.zig.fmtString(input.prompt), input.question,
+            });
+        },
+        .for_loop => |loop| {
+            const after = lines[line.loop_partner.? + 1].number;
+            try out.print("            if (!runtime.beginLoop({d}, {d}, ", .{ loop.variable, line.number });
+            try loop.start.emit(out);
+            try out.writeAll(", ");
+            try loop.limit.emit(out);
+            try out.writeAll(", ");
+            try loop.step.emit(out);
+            try out.print(")) continue :dispatch {d};\n", .{after});
+        },
+        .next_loop => {
+            const start = line.loop_partner.?;
+            try out.print("            if (try runtime.nextLoop({d}, {d})) continue :dispatch {d};\n", .{
+                lines[start].statement.for_loop.variable, lines[start].number, lines[start + 1].number,
+            });
         },
         .assign => |assign| {
             try out.print("            runtime.variables[{d}] = ", .{assign.variable});
@@ -193,7 +312,7 @@ fn compile(allocator: Allocator, source: []const u8, out: *Writer, diagnostic: *
         physical_line += 1;
         const source_line = if (std.mem.endsWith(u8, row, "\r")) row[0 .. row.len - 1] else row;
         if (std.mem.trim(u8, source_line, " ").len == 0) continue;
-        const line = parseLine(source_line) catch |err| {
+        const line = parseLine(allocator, source_line) catch |err| {
             try diagnostic.print("source row {d}: {s}\n", .{ physical_line, @errorName(err) });
             return err;
         };
@@ -206,6 +325,7 @@ fn compile(allocator: Allocator, source: []const u8, out: *Writer, diagnostic: *
     std.mem.sort(Line, lines.items, {}, Line.lessThan);
     const last = lines.getLastOrNull() orelse return error.EmptyProgram;
     if (last.statement != .system) return error.ExpectedFinalSystem;
+    try pairLoops(lines.items, diagnostic);
     for (lines.items) |line| {
         const target = switch (line.statement) {
             .jump => |target| target,
@@ -221,13 +341,17 @@ fn compile(allocator: Allocator, source: []const u8, out: *Writer, diagnostic: *
     try out.print(
         \\
         \\pub fn main(init: std.process.Init) !void {{
-        \\    var runtime: Runtime = .{{ .io = init.io }};
+        \\    var input_buffer: [256]u8 = undefined;
+        \\    var runtime: Runtime = .{{
+        \\        .io = init.io,
+        \\        .stdin = std.Io.File.stdin().readerStreaming(init.io, &input_buffer),
+        \\    }};
         \\    defer runtime.release();
         \\    dispatch: switch (@as(u16, {d})) {{
         \\
     , .{lines.items[0].number});
-    for (lines.items, 0..) |line, index| {
-        try emitLine(out, line, if (index + 1 < lines.items.len) lines.items[index + 1].number else 0);
+    for (0..lines.items.len) |index| {
+        try emitLine(out, lines.items, index);
     }
     try out.writeAll("        else => unreachable,\n    }\n}\n");
 }

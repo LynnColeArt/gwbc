@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "passed": 6,
-  "total": 6,
+  "passed": 11,
+  "total": 11,
   "fallbacks": 0,
   "shadow_mismatches": 0,
   "cases": [
@@ -181,6 +181,106 @@
             "data": "IDAgDQoaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
           }
         ],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "hours-week",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "V0VFS0xZIEhPVVJTIFRPVEFMCk5VTUJFUiBPRiBEQVlTPyAzCkhPVVJTOiA4CkhPVVJTOiA3CkhPVVJTOiA2ClRPVEFMIEhPVVJTOiAyMSAK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "V0VFS0xZIEhPVVJTIFRPVEFMCk5VTUJFUiBPRiBEQVlTPyAzCkhPVVJTOiA4CkhPVVJTOiA3CkhPVVJTOiA2ClRPVEFMIEhPVVJTOiAyMSAK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "hours-no-days",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "V0VFS0xZIEhPVVJTIFRPVEFMCk5VTUJFUiBPRiBEQVlTPyAwClRPVEFMIEhPVVJTOiAwIAo=",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "V0VFS0xZIEhPVVJTIFRPVEFMCk5VTUJFUiBPRiBEQVlTPyAwClRPVEFMIEhPVVJTOiAwIAo=",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "hours-blank-days",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "V0VFS0xZIEhPVVJTIFRPVEFMCk5VTUJFUiBPRiBEQVlTPyAKVE9UQUwgSE9VUlM6IDAgCg==",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "V0VFS0xZIEhPVVJTIFRPVEFMCk5VTUJFUiBPRiBEQVlTPyAKVE9UQUwgSE9VUlM6IDAgCg==",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "hours-retry-and-correction",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "V0VFS0xZIEhPVVJTIFRPVEFMCk5VTUJFUiBPRiBEQVlTPyBYCj9SZWRvIGZyb20gc3RhcnQKTlVNQkVSIE9GIERBWVM/IDIKSE9VUlM6ICA4CkhPVVJTOiAtMgpUT1RBTCBIT1VSUzogNiAK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "V0VFS0xZIEhPVVJTIFRPVEFMCk5VTUJFUiBPRiBEQVlTPyBYCj9SZWRvIGZyb20gc3RhcnQKTlVNQkVSIE9GIERBWVM/IDIKSE9VUlM6ICA4CkhPVVJTOiAtMgpUT1RBTCBIT1VSUzogNiAK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "nested-step-and-saved-bound",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "TE9PUCBDSEVDSwpJVEVNIDMgIDEgCklURU0gMyAgMiAKSVRFTSAyICAxIApJVEVNIDEgIDEgCkZJTkFMIENPVU5URVJTIDAgIDIgIDEgCg==",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "TE9PUCBDSEVDSwpJVEVNIDMgIDEgCklURU0gMyAgMiAKSVRFTSAyICAxIApJVEVNIDEgIDEgCkZJTkFMIENPVU5URVJTIDAgIDIgIDEgCg==",
+        "stderr": "",
+        "files": [],
         "fallbacks": 0,
         "shadow_mismatches": 0
       }

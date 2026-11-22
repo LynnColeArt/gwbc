@@ -173,6 +173,136 @@
       ],
       "body": "",
       "body_base64": false
+    },
+    {
+      "name": "hours-week",
+      "args": [
+        "HOURS.BAS",
+        "console"
+      ],
+      "stdin": "3\n8\n7\n6\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "HOURS.BAS",
+          "data": "10 PRINT \"WEEKLY HOURS TOTAL\"\n20 INPUT \"NUMBER OF DAYS\"; D%\n30 LET T% = 0\n40 FOR I% = 1 TO D%\n50 INPUT \"HOURS: \", H%\n60 LET T% = T% + H%\n70 NEXT I%\n80 PRINT \"TOTAL HOURS:\"; T%\n90 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "hours-no-days",
+      "args": [
+        "HOURS.BAS",
+        "console"
+      ],
+      "stdin": "0\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "HOURS.BAS",
+          "data": "10 PRINT \"WEEKLY HOURS TOTAL\"\n20 INPUT \"NUMBER OF DAYS\"; D%\n30 LET T% = 0\n40 FOR I% = 1 TO D%\n50 INPUT \"HOURS: \", H%\n60 LET T% = T% + H%\n70 NEXT I%\n80 PRINT \"TOTAL HOURS:\"; T%\n90 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "hours-blank-days",
+      "args": [
+        "HOURS.BAS",
+        "console"
+      ],
+      "stdin": "\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "HOURS.BAS",
+          "data": "10 PRINT \"WEEKLY HOURS TOTAL\"\n20 INPUT \"NUMBER OF DAYS\"; D%\n30 LET T% = 0\n40 FOR I% = 1 TO D%\n50 INPUT \"HOURS: \", H%\n60 LET T% = T% + H%\n70 NEXT I%\n80 PRINT \"TOTAL HOURS:\"; T%\n90 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "hours-retry-and-correction",
+      "args": [
+        "HOURS.BAS",
+        "console"
+      ],
+      "stdin": "X\n2\n 8\n-2\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "HOURS.BAS",
+          "data": "10 PRINT \"WEEKLY HOURS TOTAL\"\n20 INPUT \"NUMBER OF DAYS\"; D%\n30 LET T% = 0\n40 FOR I% = 1 TO D%\n50 INPUT \"HOURS: \", H%\n60 LET T% = T% + H%\n70 NEXT I%\n80 PRINT \"TOTAL HOURS:\"; T%\n90 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "nested-step-and-saved-bound",
+      "args": [
+        "LOOPS.BAS",
+        "console"
+      ],
+      "stdin": "",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "LOOPS.BAS",
+          "data": "10 PRINT \"LOOP CHECK\"\n20 LET B% = 2\n30 FOR I% = 3 TO 1 STEP -1\n40 FOR J% = 1 TO B%\n50 PRINT \"ITEM\"; I%; J%\n60 LET B% = 1\n70 NEXT\n80 NEXT I%\n90 FOR K% = 1 TO 2 STEP -1\n100 PRINT \"UNREACHABLE\"\n110 NEXT K%\n120 PRINT \"FINAL COUNTERS\"; I%; J%; K%\n130 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
     }
   ],
   "timeout_ms": 45000,
