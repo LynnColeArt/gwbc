@@ -49,3 +49,12 @@ is a separate test dependency. The replay runner checks its SHA-256 before use.
 - The Microsoft GW-BASIC Interpreter User's Reference documents string
   `INPUT`, including quoted strings with commas or surrounding spaces:
   https://www.bitsavers.org/pdf/microsoft/gw-basic/410130013-320-R01-0686_Microsoft_GW-BASIC_Interpreter_Users_Reference_1986.pdf
+- `fahrenheit.bas` transcribes Figure 2 from Alan Neibauer's “Getting Started
+  With … BASIC,” REMark, May 1988, page 13. The three-line excerpt is preserved
+  as a compatibility fixture and attributed to the original publication.
+  https://www.pestingers.net/pdfs/remark-scans/1988/remark-volume9-issue5-1988.pdf#page=13
+- Microsoft's `MATH1.ASM` and `MATH2.ASM` were consulted for the
+  single-precision display scaling and exponent rules. The numeric module
+  implements these rules in Zig and the DOS replay supplies the expected output.
+  https://github.com/microsoft/GW-BASIC/blob/master/MATH1.ASM
+  https://github.com/microsoft/GW-BASIC/blob/master/MATH2.ASM

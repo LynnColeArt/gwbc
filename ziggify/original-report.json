@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "passed": 25,
-  "total": 25,
+  "passed": 30,
+  "total": 30,
   "fallbacks": 0,
   "shadow_mismatches": 0,
   "cases": [
@@ -559,6 +559,106 @@
       "actual": {
         "termination": "exit:0",
         "stdout": "SW5wdXQgSVNCTiBOdW1iZXI/IDAtODA0NC0yOTU3LXgKT0sK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "fahrenheit-body-temperature",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "RU5URVIgQSBGQUhSRU5IRUlUIFRFTVBFUkFUVVJFOTguNgogOTguNiAgREVHUkVFUyBGQUhSRU5IRUlUIEVRVUFMUyAgMzcgIERFR1JFRVMgQ0VMU0lVUwo=",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "RU5URVIgQSBGQUhSRU5IRUlUIFRFTVBFUkFUVVJFOTguNgogOTguNiAgREVHUkVFUyBGQUhSRU5IRUlUIEVRVUFMUyAgMzcgIERFR1JFRVMgQ0VMU0lVUwo=",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "fahrenheit-repeating-fraction",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "RU5URVIgQSBGQUhSRU5IRUlUIFRFTVBFUkFUVVJFMzcuNQogMzcuNSAgREVHUkVFUyBGQUhSRU5IRUlUIEVRVUFMUyAgMy4wNTU1NTYgIERFR1JFRVMgQ0VMU0lVUwo=",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "RU5URVIgQSBGQUhSRU5IRUlUIFRFTVBFUkFUVVJFMzcuNQogMzcuNSAgREVHUkVFUyBGQUhSRU5IRUlUIEVRVUFMUyAgMy4wNTU1NTYgIERFR1JFRVMgQ0VMU0lVUwo=",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "fahrenheit-negative-crossing",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "RU5URVIgQSBGQUhSRU5IRUlUIFRFTVBFUkFUVVJFLTQwCi00MCAgREVHUkVFUyBGQUhSRU5IRUlUIEVRVUFMUyAtNDAgIERFR1JFRVMgQ0VMU0lVUwo=",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "RU5URVIgQSBGQUhSRU5IRUlUIFRFTVBFUkFUVVJFLTQwCi00MCAgREVHUkVFUyBGQUhSRU5IRUlUIEVRVUFMUyAtNDAgIERFR1JFRVMgQ0VMU0lVUwo=",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "fahrenheit-freezing",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "RU5URVIgQSBGQUhSRU5IRUlUIFRFTVBFUkFUVVJFMzIKIDMyICBERUdSRUVTIEZBSFJFTkhFSVQgRVFVQUxTICAwICBERUdSRUVTIENFTFNJVVMK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "RU5URVIgQSBGQUhSRU5IRUlUIFRFTVBFUkFUVVJFMzIKIDMyICBERUdSRUVTIEZBSFJFTkhFSVQgRVFVQUxTICAwICBERUdSRUVTIENFTFNJVVMK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "single-precision-arithmetic",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "RlJBQ1RJT04/IDIuNzUKUk9VTkQgVE8gSU5URUdFUj8gLTIuNQogMi43NSAtMyAgMi41ICAuMTQyODU3MiAgMzI3NjggIDYwMDAwIAogLjAwMDAwMDEgIDFFLTA4ICAxMDAwMDAwICAxRSswNyAgMS4yMzQ1NjdFLTA2IAogMSAtMSAgMiAgMTIuNSAKIC41IAogMSAKIDEuNSAK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "RlJBQ1RJT04/IDIuNzUKUk9VTkQgVE8gSU5URUdFUj8gLTIuNQogMi43NSAtMyAgMi41ICAuMTQyODU3MiAgMzI3NjggIDYwMDAwIAogLjAwMDAwMDEgIDFFLTA4ICAxMDAwMDAwICAxRSswNyAgMS4yMzQ1NjdFLTA2IAogMSAtMSAgMiAgMTIuNSAKIC41IAogMSAKIDEuNSAK",
         "stderr": "",
         "files": [],
         "fallbacks": 0,

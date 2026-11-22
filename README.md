@@ -65,28 +65,32 @@ inside the subroutine and preserves the caller's active loops. The compiler
 supports lexically nested `FOR … TO … [STEP …]` / `NEXT` loops with distinct
 variables and optional variable names on `NEXT`.
 
-Assignments, `IF`, `PRINT`, and loop bounds and steps accept integer
-expressions. They support parentheses, unary signs, multiplication,
-integer division (`\`), `MOD`, addition and subtraction, and numeric
-comparisons, and bitwise `AND` and `OR`. Comparisons produce `-1` when true
-and `0` when false. Both explicit `%` variables and unsuffixed numeric
-variables in this compiler use signed 16-bit values. The DOS interpreter's
-default single precision, including overflow promotion, remains outside this
-slice.
+Assignments, `IF`, `PRINT`, and loop bounds and steps accept numeric
+expressions. They support parentheses, unary signs, multiplication, division
+(`/`), integer division (`\`), `MOD`, addition and subtraction, comparisons,
+and bitwise `AND` and `OR`. Comparisons produce `-1` when true and `0` when
+false. Unsuffixed and `!` variables use single precision, and `%` variables
+use signed 16-bit integers. Integer addition, subtraction, and multiplication
+promote to single precision when the result exceeds the integer range.
 
-`PRINT` supports newline-terminated strings and integers separated by
+Single-precision arithmetic uses Zig `f32` with range checks and GW-BASIC-style
+seven-digit display. The replay cases cover ordinary decimal calculations and
+formatting. Bit-for-bit Microsoft Binary Format arithmetic, underflow edges,
+double precision, and all numeric error transcripts remain outside this slice.
+
+`PRINT` supports newline-terminated strings and numbers separated by
 semicolons and preserves GW-BASIC's numeric spacing. `INPUT` reads one value
 into a numeric variable or a `$` string variable. String input trims
 unquoted outer spaces and accepts quoted fields containing commas and
 outer spaces. Both forms support a quoted prompt with the comma or
 semicolon separator. The runtime also supports string concatenation and
-comparison, `LEN`, `MID$(text, start, count)`, `RIGHT$`, and integer
-decimal prefixes in `VAL`. Native console I/O uses standard streams and LF.
+comparison, `LEN`, `MID$(text, start, count)`, `RIGHT$`, and decimal
+prefixes in `VAL`. Native console I/O uses standard streams and LF.
 Sequential file output uses
 `OPEN "OUT.TXT" FOR OUTPUT AS #1`, `PRINT #1,`, and `CLOSE #1` with DOS
 CRLF, end-of-file markers, and record bytes.
 
-Floating-point input, multiple input fields, comma-separated output zones, trailing
+Multiple input fields, comma-separated output zones, trailing
 semicolons on `PRINT`, tokenized and protected program files, MBF arithmetic,
 arrays, graphics, sound, and general runtime diagnostic parity
 remain outside the verified subset.
@@ -110,6 +114,21 @@ printf '0-306-40615-2\n' | "$DEMO_DIR/isbn"
 
 The archive prints `OK` for this input. Ziggify also checks a wrong check
 digit and both uppercase and lowercase `X` check digits.
+
+## Run the 1988 Fahrenheit converter
+
+[fahrenheit.bas](fahrenheit.bas) is the three-line listing from Figure 2 of
+Alan Neibauer's “Getting Started With … BASIC,” published in the May 1988
+issue of REMark. It compiles as printed, including the fractional calculation
+and the two unsuffixed variables.
+[Scanned listing, page 13](https://www.pestingers.net/pdfs/remark-scans/1988/remark-volume9-issue5-1988.pdf#page=13)
+
+```sh
+zig build -Doptimize=ReleaseSafe
+DEMO_DIR=$(mktemp -d)
+zig-out/bin/gwbc fahrenheit.bas -o "$DEMO_DIR/fahrenheit"
+printf '98.6\n' | "$DEMO_DIR/fahrenheit"
+```
 
 ## Replay against the DOS reference
 
@@ -143,9 +162,8 @@ ziggify gate .
 
 `DOSBOX` and `GWBASIC_EXE` can point to absolute paths for local installations.
 The corpus has four transcripts from `hours.bas`, five from `reorder.bas`,
-two from `gcd.bas`, four from the archived `ISBN.BAS`, four focused console
-cases for loops, expressions, subroutine returns and string input, and six file
-cases. The runner verifies the archived listing's SHA-256 and gives both
-implementations the same bytes. In DOS it supplies `SYSTEM` after the listing
-finishes and excludes the interpreter prompt and command echo from the
-comparison.
+two from `gcd.bas`, four from the archived `ISBN.BAS`, four from
+`fahrenheit.bas`, five focused console cases, and six file cases. The runner
+verifies the archive fixtures' SHA-256. It adapts the converter's line endings
+for DOS and supplies `SYSTEM` after each archived program finishes. The
+interpreter prompt and command echo are outside the program transcript.

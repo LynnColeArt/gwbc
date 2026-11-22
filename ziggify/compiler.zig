@@ -1,11 +1,13 @@
 const std = @import("std");
 const Writer = std.Io.Writer;
 const Allocator = std.mem.Allocator;
+const Number = @import("numeric.zig").Number;
 
 const ValueKind = enum { number, string };
 const Variable = struct {
     kind: ValueKind,
     slot: usize,
+    integer: bool,
 
     fn field(self: Variable) []const u8 {
         return if (self.kind == .number) "variables" else "strings";
@@ -22,7 +24,7 @@ const Names = struct {
         const count = table.count();
         const entry = try table.getOrPut(allocator, key);
         if (!entry.found_existing) entry.value_ptr.* = count;
-        return .{ .kind = kind, .slot = entry.value_ptr.* };
+        return .{ .kind = kind, .slot = entry.value_ptr.*, .integer = key[0] == '%' };
     }
 };
 
@@ -30,7 +32,8 @@ const Operation = enum {
     add,
     sub,
     mul,
-    divTrunc,
+    divide,
+    div_trunc,
     remainder,
     equal,
     not_equal,
@@ -77,7 +80,7 @@ const Builtin = enum {
 };
 
 const Expression = union(enum) {
-    literal: i16,
+    literal: Number,
     text: []const u8,
     variable: Variable,
     builtin: struct { function: Builtin, args: [3]*const Expression },
@@ -96,9 +99,18 @@ const Expression = union(enum) {
 
     fn emit(self: Expression, out: *Writer) Writer.Error!void {
         switch (self) {
-            .literal => |value| try out.print("@as(i16, {d})", .{value}),
+            .literal => |value| switch (value) {
+                .integer => |integer| try out.print("(Number{{ .integer = {d} }})", .{integer}),
+                .single => |single| try out.print("(Number{{ .single = @bitCast(@as(u32, {d})) }})", .{@as(u32, @bitCast(single))}),
+            },
             .text => |value| try out.print("(try BasicString.fromBytes(\"{f}\"))", .{std.zig.fmtString(value)}),
-            .variable => |variable| try out.print("runtime.{s}[{d}]", .{ variable.field(), variable.slot }),
+            .variable => |variable| {
+                if (variable.kind == .number) {
+                    try out.print("runtime.readNumber({d}, {})", .{ variable.slot, variable.integer });
+                } else {
+                    try out.print("runtime.strings[{d}]", .{variable.slot});
+                }
+            },
             .builtin => |builtin| {
                 const can_fail = builtin.function != .length;
                 try out.print("{s}BasicString.{s}(", .{ if (can_fail) "(try " else "", @tagName(builtin.function) });
@@ -109,13 +121,13 @@ const Expression = union(enum) {
                 try out.writeAll(if (can_fail) "))" else ")");
             },
             .negate => |operand| {
-                try out.writeAll("(try std.math.negate(");
+                try out.writeAll("(try Number.negate(");
                 try operand.emit(out);
                 try out.writeAll("))");
             },
             .binary => |binary| {
                 if (binary.operation.comparisonToken()) |token| {
-                    try out.writeAll("@as(i16, if (");
+                    try out.writeAll("(Number{ .integer = if (");
                     if (binary.left.kind() == .string) {
                         try out.writeAll("BasicString.compare(");
                         try binary.left.emit(out);
@@ -124,23 +136,16 @@ const Expression = union(enum) {
                         try out.print(") {s} 0", .{token});
                     } else {
                         try binary.left.emit(out);
-                        try out.print(" {s} ", .{token});
+                        try out.print(".asSingle() {s} ", .{token});
                         try binary.right.emit(out);
+                        try out.writeAll(".asSingle()");
                     }
-                    try out.writeAll(") -1 else 0)");
-                } else if (binary.operation == .bit_and or binary.operation == .bit_or) {
-                    try out.writeAll("(");
-                    try binary.left.emit(out);
-                    try out.writeAll(if (binary.operation == .bit_and) " & " else " | ");
-                    try binary.right.emit(out);
-                    try out.writeAll(")");
+                    try out.writeAll(") -1 else 0 })");
                 } else {
                     if (binary.left.kind() == .string) {
                         try out.writeAll("(try BasicString.concat(");
-                    } else if (binary.operation == .remainder) {
-                        try out.writeAll("(try integerRemainder(");
                     } else {
-                        try out.print("(try std.math.{s}(i16, ", .{@tagName(binary.operation)});
+                        try out.print("(try Number.binary(.{s}, ", .{@tagName(binary.operation)});
                     }
                     try binary.left.emit(out);
                     try out.writeAll(", ");
@@ -173,7 +178,7 @@ const Statement = union(enum) {
     open,
     print: Print,
     input: struct { variable: Variable, prompt: []const u8, question: bool },
-    for_loop: struct { variable: usize, start: *const Expression, limit: *const Expression, step: *const Expression },
+    for_loop: struct { variable: Variable, start: *const Expression, limit: *const Expression, step: *const Expression },
     next_loop: ?usize,
     assign: Assignment,
     jump: u16,
@@ -195,7 +200,7 @@ const Line = struct {
 };
 
 const Parser = struct {
-    const ExpressionError = error{ OutOfMemory, InvalidSyntax, ExpectedVariable, TypeMismatch, Overflow, InvalidCharacter };
+    const ExpressionError = error{ OutOfMemory, InvalidSyntax, ExpectedVariable, TypeMismatch, Overflow, InvalidNumber, UnsupportedDouble };
     const Operator = struct { token: []const u8, operation: Operation, precedence: u8 };
     const operators = [_]Operator{
         .{ .token = "OR", .operation = .bit_or, .precedence = 1 },
@@ -212,8 +217,9 @@ const Parser = struct {
         .{ .token = "+", .operation = .add, .precedence = 4 },
         .{ .token = "-", .operation = .sub, .precedence = 4 },
         .{ .token = "MOD", .operation = .remainder, .precedence = 5 },
-        .{ .token = "\\", .operation = .divTrunc, .precedence = 6 },
+        .{ .token = "\\", .operation = .div_trunc, .precedence = 6 },
         .{ .token = "*", .operation = .mul, .precedence = 7 },
+        .{ .token = "/", .operation = .divide, .precedence = 7 },
     };
 
     allocator: Allocator,
@@ -254,9 +260,9 @@ const Parser = struct {
         if (self.rest.len == 0 or !std.ascii.isAlphabetic(self.rest[0])) return error.ExpectedVariable;
         var end: usize = 1;
         while (end < self.rest.len and (std.ascii.isAlphanumeric(self.rest[end]) or self.rest[end] == '.')) : (end += 1) {}
-        const suffix = if (end < self.rest.len and (self.rest[end] == '%' or self.rest[end] == '$')) self.rest[end] else 0;
+        const suffix = if (end < self.rest.len and (self.rest[end] == '%' or self.rest[end] == '$' or self.rest[end] == '!')) self.rest[end] else 0;
         var key: Names.Key = @splat(0);
-        key[0] = suffix;
+        key[0] = if (suffix == '!') 0 else suffix;
         for (self.rest[0..@min(end, 40)], key[1..][0..@min(end, 40)]) |byte, *canonical| {
             canonical.* = std.ascii.toUpper(byte);
         }
@@ -264,10 +270,10 @@ const Parser = struct {
         return self.names.intern(self.allocator, key, if (suffix == '$') .string else .number);
     }
 
-    fn numericVariable(self: *Parser) ExpressionError!usize {
+    fn numericVariable(self: *Parser) ExpressionError!Variable {
         const result = try self.variable();
         if (result.kind != .number) return error.TypeMismatch;
-        return result.slot;
+        return result;
     }
 
     fn node(self: *Parser, value: Expression) !*const Expression {
@@ -291,7 +297,7 @@ const Parser = struct {
         }
         if (self.rest.len != 0 and std.ascii.isAlphabetic(self.rest[0]))
             return self.node(.{ .variable = try self.variable() });
-        return self.node(.{ .literal = try std.fmt.parseInt(i16, self.digits(), 10) });
+        return error.InvalidNumber;
     }
 
     fn builtinCall(self: *Parser, function: Builtin) ExpressionError!*const Expression {
@@ -309,13 +315,14 @@ const Parser = struct {
 
     fn prefixExpression(self: *Parser) ExpressionError!*const Expression {
         self.space();
+        // Scan signed literals together so -32768 keeps its integer type.
+        const length = Number.scan(self.rest);
+        if (length != 0) {
+            const value = try Number.literal(self.rest[0..length]);
+            self.rest = self.rest[length..];
+            return self.node(.{ .literal = value });
+        }
         if (self.take("-")) {
-            self.space();
-            // The magnitude of the smallest i16 does not itself fit in i16.
-            if (self.rest.len != 0 and std.ascii.isDigit(self.rest[0])) {
-                const magnitude = try std.fmt.parseInt(i32, self.digits(), 10);
-                return self.node(.{ .literal = std.math.cast(i16, -magnitude) orelse return error.Overflow });
-            }
             const operand = try self.prefixExpression();
             if (operand.kind() != .number) return error.TypeMismatch;
             return self.node(.{ .negate = operand });
@@ -432,12 +439,12 @@ const Parser = struct {
             const start = try self.numericExpression();
             try self.require("TO");
             const limit = try self.numericExpression();
-            const step = if (self.take("STEP")) try self.numericExpression() else &Expression{ .literal = 1 };
+            const step = if (self.take("STEP")) try self.numericExpression() else &Expression{ .literal = .{ .integer = 1 } };
             return .{ .for_loop = .{ .variable = index, .start = start, .limit = limit, .step = step } };
         }
         if (self.take("NEXT")) {
             self.space();
-            return .{ .next_loop = if (self.rest.len == 0) null else try self.numericVariable() };
+            return .{ .next_loop = if (self.rest.len == 0) null else (try self.numericVariable()).slot };
         }
         if (self.take("LET")) {
             const variable_value = try self.variable();
@@ -489,7 +496,7 @@ fn pairLoops(allocator: Allocator, lines: []Line, numeric_count: usize, diagnost
         switch (line.statement) {
             .for_loop => |loop| {
                 for (stack[0..depth]) |outer| {
-                    if (lines[outer].statement.for_loop.variable == loop.variable) {
+                    if (lines[outer].statement.for_loop.variable.slot == loop.variable.slot) {
                         try diagnostic.print("BASIC line {d} reuses an enclosing FOR variable\n", .{line.number});
                         return error.ReusedForVariable;
                     }
@@ -504,7 +511,7 @@ fn pairLoops(allocator: Allocator, lines: []Line, numeric_count: usize, diagnost
                 }
                 depth -= 1;
                 const start = stack[depth];
-                if (variable != null and variable.? != lines[start].statement.for_loop.variable) {
+                if (variable != null and variable.? != lines[start].statement.for_loop.variable.slot) {
                     try diagnostic.print("BASIC line {d} does not match FOR on line {d}\n", .{ line.number, lines[start].number });
                     return error.MismatchedNext;
                 }
@@ -537,8 +544,12 @@ fn emitPrint(out: *Writer, print: Print, indent: []const u8) !void {
 }
 
 fn emitAssignment(out: *Writer, assign: Assignment, indent: []const u8) !void {
-    try out.print("{s}runtime.{s}[{d}] = ", .{ indent, assign.variable.field(), assign.variable.slot });
+    try out.print("{s}runtime.{s}[{d}] = {s}", .{
+        indent,                                              assign.variable.field(), assign.variable.slot,
+        if (assign.variable.kind == .number) "try " else "",
+    });
     try assign.value.emit(out);
+    if (assign.variable.kind == .number) try out.print(".convert({})", .{assign.variable.integer});
     try out.writeAll(";\n");
 }
 
@@ -560,15 +571,17 @@ fn emitLine(out: *Writer, lines: []const Line, index: usize) !void {
         .open => try out.writeAll("            try runtime.open();\n"),
         .print => |print| try emitPrint(out, print, "            "),
         .input => |input| {
-            try out.print("            runtime.{s}[{d}] = try runtime.{s}(\"{f}\", {});\n", .{
+            try out.print("            runtime.{s}[{d}] = try runtime.{s}(\"{f}\", {}", .{
                 input.variable.field(),                                         input.variable.slot,
                 if (input.variable.kind == .number) "input" else "stringInput", std.zig.fmtString(input.prompt),
                 input.question,
             });
+            if (input.variable.kind == .number) try out.print(", {}", .{input.variable.integer});
+            try out.writeAll(");\n");
         },
         .for_loop => |loop| {
             const after = following(lines, line.loop_partner.?);
-            try out.print("            if (!runtime.beginLoop({d}, {d}, ", .{ loop.variable, line.number });
+            try out.print("            if (!try runtime.beginLoop({d}, {d}, {}, ", .{ loop.variable.slot, line.number, loop.variable.integer });
             try loop.start.emit(out);
             try out.writeAll(", ");
             try loop.limit.emit(out);
@@ -579,7 +592,7 @@ fn emitLine(out: *Writer, lines: []const Line, index: usize) !void {
         .next_loop => {
             const start = line.loop_partner.?;
             try out.print("            if (try runtime.nextLoop({d}, {d})) continue :dispatch {d};\n", .{
-                lines[start].statement.for_loop.variable, lines[start].number, lines[start + 1].number,
+                lines[start].statement.for_loop.variable.slot, lines[start].number, lines[start + 1].number,
             });
         },
         .assign => |assign| try emitAssignment(out, assign, "            "),
@@ -602,7 +615,7 @@ fn emitLine(out: *Writer, lines: []const Line, index: usize) !void {
         .branch => |branch| {
             try out.writeAll("            if (");
             try branch.condition.emit(out);
-            try out.writeAll(" != 0) {\n");
+            try out.writeAll(".asSingle() != 0) {\n");
             try emitBranchAction(out, branch.then);
             if (branch.otherwise) |otherwise| {
                 try out.writeAll("            } else {\n");
@@ -661,6 +674,7 @@ fn compile(allocator: Allocator, source: []const u8, out: *Writer, diagnostic: *
             }
         }
     }
+    try out.writeAll(@embedFile("numeric.zig"));
     try out.writeAll(@embedFile("runtime.zig"));
     try out.print(
         \\

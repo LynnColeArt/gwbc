@@ -1,14 +1,5 @@
-const std = @import("std");
-
 comptime {
     if (!std.debug.runtime_safety) @compileError("GW-BASIC programs require Debug or ReleaseSafe");
-}
-
-fn integerRemainder(numerator: i16, denominator: i16) !i16 {
-    // BASIC gives the remainder the sign of the dividend even for a
-    // negative divisor. Widen before taking the divisor's absolute value.
-    const magnitude: i32 = @intCast(@abs(@as(i32, denominator)));
-    return @intCast(try std.math.rem(i32, numerator, magnitude));
 }
 
 const BasicString = struct {
@@ -42,11 +33,13 @@ const BasicString = struct {
         };
     }
 
-    fn length(value: BasicString) i16 {
-        return value.size;
+    fn length(value: BasicString) Number {
+        return .{ .integer = value.size };
     }
 
-    fn mid(value: BasicString, position: i16, count: i16) !BasicString {
+    fn mid(value: BasicString, position_arg: Number, count_arg: Number) !BasicString {
+        const position = try position_arg.asInteger();
+        const count = try count_arg.asInteger();
         if (position < 1 or position > 255 or count < 0 or count > 255)
             return error.IllegalFunctionCall;
         const start = @min(@as(usize, @intCast(position - 1)), value.size);
@@ -54,13 +47,14 @@ const BasicString = struct {
         return fromBytes(value.bytes()[start..end]);
     }
 
-    fn right(value: BasicString, count: i16) !BasicString {
+    fn right(value: BasicString, count_arg: Number) !BasicString {
+        const count = try count_arg.asInteger();
         if (count < 0 or count > 255) return error.IllegalFunctionCall;
         const size = @min(@as(usize, @intCast(count)), value.size);
         return fromBytes(value.bytes()[value.size - size ..]);
     }
 
-    fn val(value: BasicString) !i16 {
+    fn val(value: BasicString) !Number {
         var compact: [255]u8 = undefined;
         var length_used: usize = 0;
         for (value.bytes()) |byte| {
@@ -69,16 +63,9 @@ const BasicString = struct {
             length_used += 1;
         }
         const text = compact[0..length_used];
-        if (text.len == 0) return 0;
-        var end: usize = if (text[0] == '+' or text[0] == '-') 1 else 0;
-        const start = end;
-        while (end < text.len and std.ascii.isDigit(text[end])) : (end += 1) {}
-        if (end < text.len and
-            (text[end] == '.' or text[end] == '&' or
-                (end != start and std.mem.indexOfScalar(u8, "EeDd", text[end]) != null)))
-            return error.UnsupportedValNumber;
-        if (end == start) return 0;
-        return std.fmt.parseInt(i16, text[0..end], 10);
+        const end = Number.scan(text);
+        if (end == 0) return .{ .integer = 0 };
+        return Number.parse(text[0..end]);
     }
 };
 
@@ -87,12 +74,14 @@ fn ProgramRuntime(comptime numeric_count: usize, comptime string_count: usize) t
         const Self = @This();
         const Loop = struct {
             line: u16,
-            limit: i16,
-            step: i16,
+            limit: Number,
+            step: Number,
+            integer: bool,
 
-            fn includes(self: Loop, value: i16) bool {
-                if (self.step == 0) return true;
-                return if (self.step > 0) value <= self.limit else value >= self.limit;
+            fn includes(self: Loop, value: Number) bool {
+                const step = self.step.asSingle();
+                const limit = self.limit.asSingle();
+                return step == 0 or if (step > 0) value.asSingle() <= limit else value.asSingle() >= limit;
             }
         };
 
@@ -104,7 +93,7 @@ fn ProgramRuntime(comptime numeric_count: usize, comptime string_count: usize) t
         io: std.Io,
         allocator: std.mem.Allocator,
         stdin: std.Io.File.Reader,
-        variables: [numeric_count]i16 = @splat(0),
+        variables: [numeric_count]Number = @splat(.{ .integer = 0 }),
         strings: [string_count]BasicString = @splat(.{}),
         loops: [numeric_count]?Loop = @splat(null),
         subroutines: std.ArrayList(Subroutine) = .empty,
@@ -141,10 +130,16 @@ fn ProgramRuntime(comptime numeric_count: usize, comptime string_count: usize) t
             try self.output(to_file, if (to_file) "\r\n" else "\n");
         }
 
-        fn number(self: *Self, to_file: bool, value: i16) !void {
-            var buffer: [12]u8 = undefined;
-            if (value >= 0) try self.output(to_file, " ");
-            try self.output(to_file, try std.fmt.bufPrint(&buffer, "{d} ", .{value}));
+        fn readNumber(self: *Self, index: usize, integer: bool) Number {
+            const value = self.variables[index];
+            return if (integer) value else .{ .single = value.asSingle() };
+        }
+
+        fn number(self: *Self, to_file: bool, value: Number) !void {
+            var buffer: [24]u8 = undefined;
+            if (value.asSingle() >= 0) try self.output(to_file, " ");
+            try self.output(to_file, try value.display(&buffer));
+            try self.output(to_file, " ");
         }
 
         fn answer(self: *Self, prompt: []const u8, question: bool) ![]const u8 {
@@ -161,15 +156,16 @@ fn ProgramRuntime(comptime numeric_count: usize, comptime string_count: usize) t
             return response;
         }
 
-        fn input(self: *Self, prompt: []const u8, question: bool) !i16 {
+        fn input(self: *Self, prompt: []const u8, question: bool, integer: bool) !Number {
             while (true) {
                 const trimmed = std.mem.trim(u8, try self.answer(prompt, question), " ");
-                if (trimmed.len == 0) return 0;
-                const digits = if (trimmed[0] == '+' or trimmed[0] == '-') trimmed[1..] else trimmed;
-                if (digits.len != 0 and std.mem.findNone(u8, digits, "0123456789") == null) {
-                    return std.fmt.parseInt(i16, trimmed, 10);
+                if (trimmed.len == 0) return (Number{ .integer = 0 }).convert(integer);
+                if (Number.parse(trimmed)) |value| {
+                    return value.convert(integer);
+                } else |err| switch (err) {
+                    error.InvalidNumber => try self.output(false, "?Redo from start\n"),
+                    error.Overflow => return err,
                 }
-                try self.output(false, "?Redo from start\n");
             }
         }
 
@@ -191,10 +187,15 @@ fn ProgramRuntime(comptime numeric_count: usize, comptime string_count: usize) t
             try self.output(to_file, value.bytes());
         }
 
-        fn beginLoop(self: *Self, index: usize, line: u16, start: i16, limit: i16, step: i16) bool {
-            const loop = Loop{ .line = line, .limit = limit, .step = step };
-            self.variables[index] = start;
-            const enters = loop.includes(start);
+        fn beginLoop(self: *Self, index: usize, line: u16, integer: bool, start: Number, limit: Number, step: Number) !bool {
+            const loop = Loop{
+                .line = line,
+                .limit = try limit.convert(integer),
+                .step = try step.convert(integer),
+                .integer = integer,
+            };
+            self.variables[index] = try start.convert(integer);
+            const enters = loop.includes(self.variables[index]);
             self.loops[index] = if (enters) loop else null;
             return enters;
         }
@@ -202,7 +203,7 @@ fn ProgramRuntime(comptime numeric_count: usize, comptime string_count: usize) t
         fn nextLoop(self: *Self, index: usize, line: u16) !bool {
             const loop = self.loops[index] orelse return error.NextWithoutFor;
             if (loop.line != line) return error.NextWithoutFor;
-            const value = try std.math.add(i16, self.variables[index], loop.step);
+            const value = try (try Number.binary(.add, self.variables[index], loop.step)).convert(loop.integer);
             self.variables[index] = value;
             if (loop.includes(value)) return true;
             self.loops[index] = null;

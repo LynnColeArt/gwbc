@@ -11,14 +11,18 @@ ROOT = Path(__file__).resolve().parent
 COMPILER = ROOT / "zig-out" / "bin" / "gwbc"
 ORACLE_HASH = "ceb0c57c1c31981844a2e41b375cd14f77630e3e200419fe746b501d21dcf333"
 ISBN_HASH = "4b75f35594c8f9f8082d60b2b185befd14372759ff0a07479a3782fb85836db2"
+FAHRENHEIT_HASH = "52d6ec00ad4db676e0155d77776707a355a86655bba71e9bed6345bc376cc3a1"
 
 
 def source_path(program):
-    if program != "ISBN.BAS":
+    if program == "ISBN.BAS":
+        source, expected = ROOT / ".ziggify/oracle/ISBN.BAS", ISBN_HASH
+    elif program == "FAHREN.BAS":
+        source, expected = ROOT / "fahrenheit.bas", FAHRENHEIT_HASH
+    else:
         return Path(program)
-    source = ROOT / ".ziggify/oracle/ISBN.BAS"
-    if hashlib.sha256(source.read_bytes()).hexdigest() != ISBN_HASH:
-        raise ValueError("ISBN.BAS does not match Frank Cox's pinned archived listing")
+    if hashlib.sha256(source.read_bytes()).hexdigest() != expected:
+        raise ValueError(f"{program} does not match the pinned archived listing")
     return source
 
 
@@ -128,7 +132,7 @@ def check():
     config = json.loads((ROOT / "ziggify.json").read_text())
     samples = {name.upper(): (ROOT / name).read_text() for name in ("hours.bas", "reorder.bas", "gcd.bas")}
     for case in config["cases"]:
-        for fixture in case["files"]:
+        for fixture in case.get("files", []):
             sample = samples.get(fixture["path"])
             if sample is not None and fixture["data"] != sample:
                 raise ValueError(f"{case['name']} uses a different copy of {fixture['path']}")
@@ -147,6 +151,7 @@ def check():
             ("10 RETURN 40\n20 SYSTEM\n", b"jumps to missing line 40"),
             ('10 LET X%=MID$("text",1,1)\n20 SYSTEM\n', b"TypeMismatch"),
             ('10 IF "text" THEN 20\n20 SYSTEM\n', b"TypeMismatch"),
+            ("10 PRINT 12345678\n20 SYSTEM\n", b"UnsupportedDouble"),
         ]:
             program.write_text(text)
             executable = program.with_suffix("")

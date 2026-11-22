@@ -643,6 +643,112 @@
       ],
       "body": "",
       "body_base64": false
+    },
+    {
+      "name": "fahrenheit-body-temperature",
+      "args": [
+        "FAHREN.BAS",
+        "console-end"
+      ],
+      "stdin": "98.6\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "fahrenheit-repeating-fraction",
+      "args": [
+        "FAHREN.BAS",
+        "console-end"
+      ],
+      "stdin": "37.5\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "fahrenheit-negative-crossing",
+      "args": [
+        "FAHREN.BAS",
+        "console-end"
+      ],
+      "stdin": "-40\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "fahrenheit-freezing",
+      "args": [
+        "FAHREN.BAS",
+        "console-end"
+      ],
+      "stdin": "32\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "single-precision-arithmetic",
+      "args": [
+        "NUMBERS.BAS",
+        "console"
+      ],
+      "stdin": "2.75\n-2.5\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "NUMBERS.BAS",
+          "data": "10 INPUT \"FRACTION\"; A\n20 INPUT \"ROUND TO INTEGER\"; B%\n30 PRINT A!;B%;5/2;1/7;32767+1;300*200\n40 PRINT .0000001;.00000001;1E6;1E7;1.234567E-6\n50 PRINT 2.5\\2;-2.5\\2;3.5\\2;VAL(\"1.25E1\")\n60 FOR J=.5 TO 1.5 STEP .5\n70 PRINT J\n80 NEXT J\n90 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
     }
   ],
   "timeout_ms": 45000,
