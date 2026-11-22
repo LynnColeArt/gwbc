@@ -1,0 +1,38 @@
+# Provenance
+
+`gwbc` originated in [Ziggify](https://github.com/LynnColeArt/ziggify) under
+`examples/gwbasic`. This repository carries that directory's three development
+commits through Ziggify revision `58ed6a7` and the original MIT license.
+
+The Zig compiler is an independent implementation. The pinned DOS executable
+is a separate test dependency. The replay runner checks its SHA-256 before use.
+
+## References
+
+
+- Microsoft’s 1983 GW-BASIC interpreter source archive and release notes
+  establish the origin of the assembly reference:
+  https://github.com/microsoft/GW-BASIC
+- T.K. Chia’s JWasm build of the historical source, release `20261005`, tag
+  revision `1432e385776554e43784b411eda7b8b2a9709e73`. The DOS executable SHA-256
+  is pinned in the runner. The executable is used unchanged for observation
+  and downloaded separately from the Zig compiler:
+  https://codeberg.org/tkchia/GW-BASIC/releases/tag/20261005
+- DOSBox 0.74-3 supplies the DOS runtime for the assembly reference. Its
+  documented mount and unattended command options are used by the runner:
+  https://www.dosbox.com/DOSBoxManual.html
+
+- The pinned T.K. Chia revision's `OEM.ASM` and `GWMAIN.ASM` identify the BIOS
+  keyboard and text output calls and integer loop setup. The DOS guest launcher
+  uses those BIOS interfaces to supply scripted keyboard input and observe
+  text writes. The source and executable remain unchanged:
+  https://codeberg.org/tkchia/GW-BASIC/src/commit/1432e385776554e43784b411eda7b8b2a9709e73
+- Microsoft's GW-BASIC documentation supplied the `INPUT` prompt and separator
+  rules. Console transcripts and loop results were recorded from the pinned
+  DOS executable:
+  https://www.bitsavers.org/pdf/mindset/100213-001_GW-BASIC_Reference_Manual_1984.pdf
+- Microsoft's GW-BASIC Interpreter User's Guide informed integer division,
+  modulus, and arithmetic precedence. The pinned executable supplied observed
+  results for signed remainders, adjacent unary signs, relational aliases,
+  and comparisons used as integers:
+  https://www.bitsavers.org/pdf/microsoft/gw-basic/410130001-320-R01-0686_Microsoft_GW-BASIC_Interpreter_Users_Guide_1986.pdf

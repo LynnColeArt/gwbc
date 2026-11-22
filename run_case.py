@@ -9,7 +9,6 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parent
 COMPILER = ROOT / "zig-out" / "bin" / "gwbc"
-SOURCE_FILE = ROOT / "ziggify" / "compiler.zig"
 ORACLE_HASH = "ceb0c57c1c31981844a2e41b375cd14f77630e3e200419fe746b501d21dcf333"
 
 
@@ -84,9 +83,8 @@ def original(program, mode="file"):
 
 
 def build():
-    COMPILER.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run(
-        ["zig", "build-exe", SOURCE_FILE, "-O", "ReleaseSafe", f"-femit-bin={COMPILER}"],
+        ["zig", "build", "-Doptimize=ReleaseSafe"],
         check=True,
         cwd=ROOT,
     )

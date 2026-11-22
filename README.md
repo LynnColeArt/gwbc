@@ -1,19 +1,21 @@
-# GW-BASIC native compiler experiment
+# gwbc
 
 `gwbc` compiles a subset of line-numbered GW-BASIC into standalone Linux x86-64
 executables. The Zig front end parses source, resolves BASIC line targets and
 loop pairs, and generates Zig control flow and runtime calls. Zig 0.16.0 builds
-the executable.
+the executable. The project started as a [Ziggify](https://github.com/LynnColeArt/ziggify)
+compiler experiment. See [PROVENANCE.md](PROVENANCE.md) for the source history
+and DOS reference.
 
 ## Compile and run the weekly-hours tally
 
 [hours.bas](hours.bas) asks for the number of days, reads the hours for each day,
-and prints their sum. From the Ziggify repository root:
+and prints their sum. From this repository root:
 
 ```sh
-python3 examples/gwbasic/run_case.py build
+zig build -Doptimize=ReleaseSafe
 DEMO_DIR=$(mktemp -d)
-examples/gwbasic/zig-out/bin/gwbc examples/gwbasic/hours.bas -o "$DEMO_DIR/hours"
+zig-out/bin/gwbc hours.bas -o "$DEMO_DIR/hours"
 "$DEMO_DIR/hours"
 ```
 
@@ -28,7 +30,7 @@ HOURS: 6
 TOTAL HOURS: 21
 ```
 
-Use `gwbc --emit-zig examples/gwbasic/hours.bas` to inspect the generated code.
+Use `zig-out/bin/gwbc --emit-zig hours.bas` to inspect the generated code.
 The executable also accepts piped input. It echoes piped answers to preserve
 the BASIC transcript and leaves terminal echo to the host on interactive runs.
 
@@ -38,7 +40,7 @@ partial case. With 14 units on hand, a target of 50, and 10 units per case, it
 prints `CASES TO ORDER: 4`.
 
 ```sh
-examples/gwbasic/zig-out/bin/gwbc examples/gwbasic/reorder.bas -o "$DEMO_DIR/reorder"
+zig-out/bin/gwbc reorder.bas -o "$DEMO_DIR/reorder"
 printf '14\n50\n10\n' | "$DEMO_DIR/reorder"
 ```
 
@@ -88,17 +90,17 @@ interpreter's input echo. Terminal control effects and blank lines after the
 last visible row are outside the capture. File fixtures compare complete
 `OUT.TXT` bytes. Ziggify also compares exit status and both output streams.
 
-With DOSBox, GNU binutils, Python 3, and Zig 0.16.0 installed, run from the
-repository root:
+Install [Ziggify](https://github.com/LynnColeArt/ziggify/releases/tag/v0.2.0-alpha.1),
+DOSBox, GNU binutils, Python 3, and Zig 0.16.0. With `ziggify` on PATH,
+run from the repository root:
 
 ```sh
-zig build -Doptimize=ReleaseSafe
-mkdir -p examples/gwbasic/.ziggify/oracle
+mkdir -p .ziggify/oracle
 curl -fsSL https://codeberg.org/tkchia/GW-BASIC/releases/download/20261005/GWB26A05.ZIP \
-  -o examples/gwbasic/.ziggify/oracle/GWB26A05.ZIP
-unzip -p examples/gwbasic/.ziggify/oracle/GWB26A05.ZIP DEVEL/GWBASIC/GWBASIC.EXE \
-  > examples/gwbasic/.ziggify/oracle/GWBASIC.EXE
-./zig-out/bin/ziggify gate examples/gwbasic
+  -o .ziggify/oracle/GWB26A05.ZIP
+unzip -p .ziggify/oracle/GWB26A05.ZIP DEVEL/GWBASIC/GWBASIC.EXE \
+  > .ziggify/oracle/GWBASIC.EXE
+ziggify gate .
 ```
 
 `DOSBOX` and `GWBASIC_EXE` can point to absolute paths for local installations.
