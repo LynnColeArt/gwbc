@@ -4,6 +4,13 @@ comptime {
     if (!std.debug.runtime_safety) @compileError("GW-BASIC programs require Debug or ReleaseSafe");
 }
 
+fn integerRemainder(numerator: i16, denominator: i16) !i16 {
+    // BASIC gives the remainder the sign of the dividend even for a
+    // negative divisor. Widen before taking the divisor's absolute value.
+    const magnitude: i32 = @intCast(@abs(@as(i32, denominator)));
+    return @intCast(try std.math.rem(i32, numerator, magnitude));
+}
+
 const Runtime = struct {
     const Loop = struct {
         line: u16,

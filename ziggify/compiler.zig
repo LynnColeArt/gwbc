@@ -2,21 +2,73 @@ const std = @import("std");
 const Writer = std.Io.Writer;
 const Allocator = std.mem.Allocator;
 
-const Atom = union(enum) {
+const Operation = enum {
+    add,
+    sub,
+    mul,
+    divTrunc,
+    remainder,
+    equal,
+    not_equal,
+    less,
+    greater,
+    less_equal,
+    greater_equal,
+
+    fn comparisonToken(self: Operation) ?[]const u8 {
+        return switch (self) {
+            .equal => "==",
+            .not_equal => "!=",
+            .less => "<",
+            .greater => ">",
+            .less_equal => "<=",
+            .greater_equal => ">=",
+            else => null,
+        };
+    }
+};
+
+const Expression = union(enum) {
     literal: i16,
     variable: u8,
+    negate: *const Expression,
+    binary: struct { operation: Operation, left: *const Expression, right: *const Expression },
 
-    fn emit(self: Atom, out: *Writer) !void {
+    fn emit(self: Expression, out: *Writer) Writer.Error!void {
         switch (self) {
             .literal => |value| try out.print("@as(i16, {d})", .{value}),
             .variable => |index| try out.print("runtime.variables[{d}]", .{index}),
+            .negate => |operand| {
+                try out.writeAll("(try std.math.negate(");
+                try operand.emit(out);
+                try out.writeAll("))");
+            },
+            .binary => |binary| {
+                if (binary.operation.comparisonToken()) |token| {
+                    try out.writeAll("@as(i16, if (");
+                    try binary.left.emit(out);
+                    try out.print(" {s} ", .{token});
+                    try binary.right.emit(out);
+                    try out.writeAll(") -1 else 0)");
+                } else {
+                    if (binary.operation == .remainder) {
+                        try out.writeAll("(try integerRemainder(");
+                    } else {
+                        try out.print("(try std.math.{s}(i16, ", .{@tagName(binary.operation)});
+                    }
+                    try binary.left.emit(out);
+                    try out.writeAll(", ");
+                    try binary.right.emit(out);
+                    try out.writeAll("))");
+                }
+            },
         }
     }
 };
 
 const PrintValue = union(enum) {
     text: []const u8,
-    number: Atom,
+    number: *const Expression,
 };
 
 const Print = struct {
@@ -29,11 +81,11 @@ const Statement = union(enum) {
     open,
     print: Print,
     input: struct { variable: u8, prompt: []const u8, question: bool },
-    for_loop: struct { variable: u8, start: Atom, limit: Atom, step: Atom },
+    for_loop: struct { variable: u8, start: *const Expression, limit: *const Expression, step: *const Expression },
     next_loop: ?u8,
-    assign: struct { variable: u8, value: Atom, add: ?Atom },
+    assign: struct { variable: u8, value: *const Expression },
     jump: u16,
-    branch: struct { left: Atom, right: Atom, target: u16 },
+    branch: struct { condition: *const Expression, target: u16, otherwise: ?u16 },
     close,
     system,
 };
@@ -49,6 +101,26 @@ const Line = struct {
 };
 
 const Parser = struct {
+    const ExpressionError = error{ OutOfMemory, InvalidSyntax, ExpectedIntegerVariable, Overflow, InvalidCharacter };
+    const Operator = struct { token: []const u8, operation: Operation, precedence: u8 };
+    const operators = [_]Operator{
+        .{ .token = "<=", .operation = .less_equal, .precedence = 1 },
+        .{ .token = "=<", .operation = .less_equal, .precedence = 1 },
+        .{ .token = ">=", .operation = .greater_equal, .precedence = 1 },
+        .{ .token = "=>", .operation = .greater_equal, .precedence = 1 },
+        .{ .token = "<>", .operation = .not_equal, .precedence = 1 },
+        .{ .token = "><", .operation = .not_equal, .precedence = 1 },
+        .{ .token = "=", .operation = .equal, .precedence = 1 },
+        .{ .token = "<", .operation = .less, .precedence = 1 },
+        .{ .token = ">", .operation = .greater, .precedence = 1 },
+        .{ .token = "+", .operation = .add, .precedence = 2 },
+        .{ .token = "-", .operation = .sub, .precedence = 2 },
+        .{ .token = "MOD", .operation = .remainder, .precedence = 3 },
+        .{ .token = "\\", .operation = .divTrunc, .precedence = 4 },
+        .{ .token = "*", .operation = .mul, .precedence = 5 },
+    };
+
+    allocator: Allocator,
     rest: []const u8,
 
     fn space(self: *Parser) void {
@@ -89,14 +161,57 @@ const Parser = struct {
         return index;
     }
 
-    fn atom(self: *Parser) !Atom {
-        self.space();
+    fn node(self: *Parser, value: Expression) !*const Expression {
+        const result = try self.allocator.create(Expression);
+        result.* = value;
+        return result;
+    }
+
+    fn primary(self: *Parser) ExpressionError!*const Expression {
+        if (self.take("(")) {
+            const value = try self.expression(1);
+            try self.require(")");
+            return value;
+        }
         if (self.rest.len != 0 and std.ascii.isAlphabetic(self.rest[0]))
-            return .{ .variable = try self.variable() };
-        const start = self.rest;
-        if (self.rest.len != 0 and self.rest[0] == '-') self.rest = self.rest[1..];
-        _ = self.digits();
-        return .{ .literal = try std.fmt.parseInt(i16, start[0 .. start.len - self.rest.len], 10) };
+            return self.node(.{ .variable = try self.variable() });
+        return self.node(.{ .literal = try std.fmt.parseInt(i16, self.digits(), 10) });
+    }
+
+    fn prefixExpression(self: *Parser) ExpressionError!*const Expression {
+        self.space();
+        if (self.take("-")) {
+            self.space();
+            // The magnitude of the smallest i16 does not itself fit in i16.
+            if (self.rest.len != 0 and std.ascii.isDigit(self.rest[0])) {
+                const magnitude = try std.fmt.parseInt(i32, self.digits(), 10);
+                return self.node(.{ .literal = std.math.cast(i16, -magnitude) orelse return error.Overflow });
+            }
+            return self.node(.{ .negate = try self.prefixExpression() });
+        }
+        if (self.take("+")) return self.prefixExpression();
+        return self.primary();
+    }
+
+    fn binaryOperator(self: *Parser) ?Operator {
+        self.space();
+        for (operators) |operator| {
+            if (std.ascii.startsWithIgnoreCase(self.rest, operator.token)) return operator;
+        }
+        return null;
+    }
+
+    fn expression(self: *Parser, minimum_precedence: u8) ExpressionError!*const Expression {
+        var left = try self.prefixExpression();
+        while (self.binaryOperator()) |operator| {
+            if (operator.precedence < minimum_precedence) break;
+            self.rest = self.rest[operator.token.len..];
+            // A higher minimum for the right operand makes equal precedence
+            // bind from left to right.
+            const right = try self.expression(operator.precedence + 1);
+            left = try self.node(.{ .binary = .{ .operation = operator.operation, .left = left, .right = right } });
+        }
+        return left;
     }
 
     // The opening quote has already been consumed.
@@ -107,7 +222,7 @@ const Parser = struct {
         return value;
     }
 
-    fn printStatement(self: *Parser, allocator: Allocator) !Print {
+    fn printStatement(self: *Parser) !Print {
         const file = self.take("#1");
         if (file) try self.require(",");
         self.space();
@@ -116,15 +231,15 @@ const Parser = struct {
             const value: PrintValue = if (self.take("\""))
                 .{ .text = try self.string() }
             else
-                .{ .number = try self.atom() };
-            try values.append(allocator, value);
+                .{ .number = try self.expression(1) };
+            try values.append(self.allocator, value);
             if (!self.take(";")) break;
             if (self.rest.len == 0) return error.UnsupportedTrailingSemicolon;
         }
         return .{ .file = file, .values = values.items };
     }
 
-    fn statement(self: *Parser, allocator: Allocator) !Statement {
+    fn statement(self: *Parser) !Statement {
         if (self.take("REM") or self.take("'")) {
             self.rest = "";
             return .remark;
@@ -137,7 +252,7 @@ const Parser = struct {
             try self.require("#1");
             return .open;
         }
-        if (self.take("PRINT")) return .{ .print = try self.printStatement(allocator) };
+        if (self.take("PRINT")) return .{ .print = try self.printStatement() };
         if (self.take("INPUT")) {
             var prompt: []const u8 = "";
             var question = true;
@@ -151,10 +266,10 @@ const Parser = struct {
         if (self.take("FOR")) {
             const index = try self.variable();
             try self.require("=");
-            const start = try self.atom();
+            const start = try self.expression(1);
             try self.require("TO");
-            const limit = try self.atom();
-            const step = if (self.take("STEP")) try self.atom() else Atom{ .literal = 1 };
+            const limit = try self.expression(1);
+            const step = if (self.take("STEP")) try self.expression(1) else &Expression{ .literal = 1 };
             return .{ .for_loop = .{ .variable = index, .start = start, .limit = limit, .step = step } };
         }
         if (self.take("NEXT")) {
@@ -164,16 +279,15 @@ const Parser = struct {
         if (self.take("LET")) {
             const index = try self.variable();
             try self.require("=");
-            const value = try self.atom();
-            return .{ .assign = .{ .variable = index, .value = value, .add = if (self.take("+")) try self.atom() else null } };
+            return .{ .assign = .{ .variable = index, .value = try self.expression(1) } };
         }
         if (self.take("GOTO")) return .{ .jump = try self.lineNumber() };
         if (self.take("IF")) {
-            const left = try self.atom();
-            try self.require("<");
-            const right = try self.atom();
+            const condition = try self.expression(1);
             try self.require("THEN");
-            return .{ .branch = .{ .left = left, .right = right, .target = try self.lineNumber() } };
+            const target = try self.lineNumber();
+            const otherwise = if (self.take("ELSE")) try self.lineNumber() else null;
+            return .{ .branch = .{ .condition = condition, .target = target, .otherwise = otherwise } };
         }
         if (self.take("CLOSE")) {
             try self.require("#1");
@@ -187,9 +301,9 @@ const Parser = struct {
 fn parseLine(allocator: Allocator, source: []const u8) !Line {
     if (source.len > 255) return error.LineTooLong;
     for (source) |byte| if (byte < ' ' or byte > '~') return error.ExpectedPrintableAscii;
-    var parser: Parser = .{ .rest = source };
+    var parser: Parser = .{ .allocator = allocator, .rest = source };
     const number = try parser.lineNumber();
-    const statement = try parser.statement(allocator);
+    const statement = try parser.statement();
     parser.space();
     if (parser.rest.len != 0) return error.TrailingInput;
     return .{ .number = number, .statement = statement };
@@ -274,13 +388,7 @@ fn emitLine(out: *Writer, lines: []const Line, index: usize) !void {
         },
         .assign => |assign| {
             try out.print("            runtime.variables[{d}] = ", .{assign.variable});
-            if (assign.add) |add| {
-                try out.writeAll("try std.math.add(i16, ");
-                try assign.value.emit(out);
-                try out.writeAll(", ");
-                try add.emit(out);
-                try out.writeAll(")");
-            } else try assign.value.emit(out);
+            try assign.value.emit(out);
             try out.writeAll(";\n");
         },
         .jump => |target| {
@@ -289,10 +397,12 @@ fn emitLine(out: *Writer, lines: []const Line, index: usize) !void {
         },
         .branch => |branch| {
             try out.writeAll("            if (");
-            try branch.left.emit(out);
-            try out.writeAll(" < ");
-            try branch.right.emit(out);
-            try out.print(") continue :dispatch {d};\n", .{branch.target});
+            try branch.condition.emit(out);
+            try out.print(" != 0) continue :dispatch {d};\n", .{branch.target});
+            if (branch.otherwise) |target| {
+                try out.print("            continue :dispatch {d};\n        }},\n", .{target});
+                return;
+            }
         },
         .close => try out.writeAll("            try runtime.close();\n"),
         .system => {
@@ -327,14 +437,17 @@ fn compile(allocator: Allocator, source: []const u8, out: *Writer, diagnostic: *
     if (last.statement != .system) return error.ExpectedFinalSystem;
     try pairLoops(lines.items, diagnostic);
     for (lines.items) |line| {
-        const target = switch (line.statement) {
-            .jump => |target| target,
-            .branch => |branch| branch.target,
+        const targets: [2]?u16 = switch (line.statement) {
+            .jump => |target| .{ target, null },
+            .branch => |branch| .{ branch.target, branch.otherwise },
             else => continue,
         };
-        if (!numbers.contains(target)) {
-            try diagnostic.print("BASIC line {d} jumps to missing line {d}\n", .{ line.number, target });
-            return error.UndefinedLine;
+        for (targets) |maybe_target| {
+            const target = maybe_target orelse continue;
+            if (!numbers.contains(target)) {
+                try diagnostic.print("BASIC line {d} jumps to missing line {d}\n", .{ line.number, target });
+                return error.UndefinedLine;
+            }
         }
     }
     try out.writeAll(@embedFile("runtime.zig"));

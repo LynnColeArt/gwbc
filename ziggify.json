@@ -303,6 +303,162 @@
       ],
       "body": "",
       "body_base64": false
+    },
+    {
+      "name": "reorder-round-up",
+      "args": [
+        "REORDER.BAS",
+        "console"
+      ],
+      "stdin": "14\n50\n10\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "REORDER.BAS",
+          "data": "10 PRINT \"STOCK REORDER PLANNER\"\n20 INPUT \"UNITS ON HAND\"; H%\n30 INPUT \"TARGET UNITS\"; T%\n40 INPUT \"UNITS PER CASE\"; C%\n50 IF H% < 0 THEN 190\n60 IF T% < 0 THEN 190\n70 IF C% <= 0 THEN 170\n80 IF H% >= T% THEN 150 ELSE 90\n90 LET N% = T% - H%\n100 LET B% = N% \\ C%\n110 IF N% MOD C% = 0 THEN 130\n120 LET B% = B% + 1\n130 PRINT \"CASES TO ORDER:\"; B%\n140 GOTO 200\n150 PRINT \"NO ORDER NEEDED\"\n160 GOTO 200\n170 PRINT \"CASE SIZE MUST BE POSITIVE\"\n180 GOTO 200\n190 PRINT \"UNIT COUNTS MUST BE NONNEGATIVE\"\n200 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "reorder-exact-cases",
+      "args": [
+        "REORDER.BAS",
+        "console"
+      ],
+      "stdin": "15\n35\n5\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "REORDER.BAS",
+          "data": "10 PRINT \"STOCK REORDER PLANNER\"\n20 INPUT \"UNITS ON HAND\"; H%\n30 INPUT \"TARGET UNITS\"; T%\n40 INPUT \"UNITS PER CASE\"; C%\n50 IF H% < 0 THEN 190\n60 IF T% < 0 THEN 190\n70 IF C% <= 0 THEN 170\n80 IF H% >= T% THEN 150 ELSE 90\n90 LET N% = T% - H%\n100 LET B% = N% \\ C%\n110 IF N% MOD C% = 0 THEN 130\n120 LET B% = B% + 1\n130 PRINT \"CASES TO ORDER:\"; B%\n140 GOTO 200\n150 PRINT \"NO ORDER NEEDED\"\n160 GOTO 200\n170 PRINT \"CASE SIZE MUST BE POSITIVE\"\n180 GOTO 200\n190 PRINT \"UNIT COUNTS MUST BE NONNEGATIVE\"\n200 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "reorder-already-stocked",
+      "args": [
+        "REORDER.BAS",
+        "console"
+      ],
+      "stdin": "42\n35\n5\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "REORDER.BAS",
+          "data": "10 PRINT \"STOCK REORDER PLANNER\"\n20 INPUT \"UNITS ON HAND\"; H%\n30 INPUT \"TARGET UNITS\"; T%\n40 INPUT \"UNITS PER CASE\"; C%\n50 IF H% < 0 THEN 190\n60 IF T% < 0 THEN 190\n70 IF C% <= 0 THEN 170\n80 IF H% >= T% THEN 150 ELSE 90\n90 LET N% = T% - H%\n100 LET B% = N% \\ C%\n110 IF N% MOD C% = 0 THEN 130\n120 LET B% = B% + 1\n130 PRINT \"CASES TO ORDER:\"; B%\n140 GOTO 200\n150 PRINT \"NO ORDER NEEDED\"\n160 GOTO 200\n170 PRINT \"CASE SIZE MUST BE POSITIVE\"\n180 GOTO 200\n190 PRINT \"UNIT COUNTS MUST BE NONNEGATIVE\"\n200 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "reorder-zero-case-size",
+      "args": [
+        "REORDER.BAS",
+        "console"
+      ],
+      "stdin": "14\n50\n0\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "REORDER.BAS",
+          "data": "10 PRINT \"STOCK REORDER PLANNER\"\n20 INPUT \"UNITS ON HAND\"; H%\n30 INPUT \"TARGET UNITS\"; T%\n40 INPUT \"UNITS PER CASE\"; C%\n50 IF H% < 0 THEN 190\n60 IF T% < 0 THEN 190\n70 IF C% <= 0 THEN 170\n80 IF H% >= T% THEN 150 ELSE 90\n90 LET N% = T% - H%\n100 LET B% = N% \\ C%\n110 IF N% MOD C% = 0 THEN 130\n120 LET B% = B% + 1\n130 PRINT \"CASES TO ORDER:\"; B%\n140 GOTO 200\n150 PRINT \"NO ORDER NEEDED\"\n160 GOTO 200\n170 PRINT \"CASE SIZE MUST BE POSITIVE\"\n180 GOTO 200\n190 PRINT \"UNIT COUNTS MUST BE NONNEGATIVE\"\n200 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "reorder-negative-stock",
+      "args": [
+        "REORDER.BAS",
+        "console"
+      ],
+      "stdin": "-1\n50\n10\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "REORDER.BAS",
+          "data": "10 PRINT \"STOCK REORDER PLANNER\"\n20 INPUT \"UNITS ON HAND\"; H%\n30 INPUT \"TARGET UNITS\"; T%\n40 INPUT \"UNITS PER CASE\"; C%\n50 IF H% < 0 THEN 190\n60 IF T% < 0 THEN 190\n70 IF C% <= 0 THEN 170\n80 IF H% >= T% THEN 150 ELSE 90\n90 LET N% = T% - H%\n100 LET B% = N% \\ C%\n110 IF N% MOD C% = 0 THEN 130\n120 LET B% = B% + 1\n130 PRINT \"CASES TO ORDER:\"; B%\n140 GOTO 200\n150 PRINT \"NO ORDER NEEDED\"\n160 GOTO 200\n170 PRINT \"CASE SIZE MUST BE POSITIVE\"\n180 GOTO 200\n190 PRINT \"UNIT COUNTS MUST BE NONNEGATIVE\"\n200 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "expression-precedence-and-signs",
+      "args": [
+        "MATH.BAS",
+        "console"
+      ],
+      "stdin": "",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "MATH.BAS",
+          "data": "10 PRINT \"PRECEDENCE\"\n20 PRINT 2+3*4; (2+3)*4; 14 MOD 4*3\n30 PRINT 21 MOD 8\\3; 20\\3 MOD 4\n40 PRINT (-7)\\3; 7\\(-3); (-7) MOD 3; 7 MOD (-3)\n45 PRINT 2*-3; 2--3; --3; 1<-2; 1<2<3\n50 PRINT +3; -(2+3); -32768\n55 PRINT (-32768) MOD (-1); 7 MOD (-32768)\n60 PRINT 3=3; 3<>3; 2=<3; 3=>3; 2><3\n65 PRINT 3>2; 3>=4; 2<=2; 2<>3\n70 LET A%=2\n80 IF A% THEN 100 ELSE 90\n90 PRINT \"BAD TRUE\"\n100 IF A%-2 THEN 120 ELSE 110\n110 PRINT \"GOOD FALSE\"\n120 FOR I%=1+1 TO 2*2 STEP 4\\2\n130 PRINT I%\n140 NEXT\n150 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
     }
   ],
   "timeout_ms": 45000,

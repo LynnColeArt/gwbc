@@ -32,15 +32,31 @@ Use `gwbc --emit-zig examples/gwbasic/hours.bas` to inspect the generated code.
 The executable also accepts piped input. It echoes piped answers to preserve
 the BASIC transcript and leaves terminal echo to the host on interactive runs.
 
+[reorder.bas](reorder.bas) calculates how many full cases to order to restock an
+item. It uses integer division and `MOD` to round up when the shortage leaves a
+partial case. With 14 units on hand, a target of 50, and 10 units per case, it
+prints `CASES TO ORDER: 4`.
+
+```sh
+examples/gwbasic/zig-out/bin/gwbc examples/gwbasic/reorder.bas -o "$DEMO_DIR/reorder"
+printf '14\n50\n10\n' | "$DEMO_DIR/reorder"
+```
+
 ## Supported source
 
 Use printable ASCII with one statement per numbered line and a final
 `SYSTEM`. The compiler supports `REM` and apostrophe comments, signed 16-bit
-integers in one-letter variables such as `I%`, `LET` with optional checked
-addition, `GOTO`, and `IF … < … THEN` with a line number. It supports
+integers in one-letter variables such as `I%`, `LET`, `GOTO`, and
+`IF … THEN line [ELSE line]`. It supports
 lexically nested `FOR … TO … [STEP …]` / `NEXT` loops with distinct variables,
-optional variable names on `NEXT`, and integer literals or variables for loop
-bounds and steps.
+and optional variable names on `NEXT`.
+
+Assignments, `IF`, `PRINT`, and loop bounds and steps accept integer
+expressions. They support parentheses, unary signs, multiplication,
+integer division (`\`), `MOD`, addition and subtraction, and numeric
+comparisons. Comparisons produce `-1` when true and `0` when false. Intermediate
+arithmetic results must fit in a signed 16-bit integer. Single-precision
+promotion on overflow remains outside this slice.
 
 `PRINT` supports newline-terminated strings and integers separated by semicolons
 and preserves GW-BASIC's numeric spacing. `INPUT` reads one signed decimal
@@ -86,6 +102,6 @@ unzip -p examples/gwbasic/.ziggify/oracle/GWB26A05.ZIP DEVEL/GWBASIC/GWBASIC.EXE
 ```
 
 `DOSBOX` and `GWBASIC_EXE` can point to absolute paths for local installations.
-The corpus has four transcripts from `hours.bas`, one transcript for nested,
-descending, and skipped loops with a saved bound, and six file cases covering
-strings, integers, branches, line order, and record boundaries.
+The corpus has four transcripts from `hours.bas`, five from `reorder.bas`,
+two focused console cases for loop and expression semantics, and six file cases
+covering strings, integers, branches, line order, and record boundaries.

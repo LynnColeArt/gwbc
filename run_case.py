@@ -101,11 +101,12 @@ def native(program, _mode="file"):
 
 def check():
     config = json.loads((ROOT / "ziggify.json").read_text())
-    hours = (ROOT / "hours.bas").read_text()
+    samples = {name.upper(): (ROOT / name).read_text() for name in ("hours.bas", "reorder.bas")}
     for case in config["cases"]:
         for fixture in case["files"]:
-            if fixture["path"] == "HOURS.BAS" and fixture["data"] != hours:
-                raise ValueError(f"{case['name']} uses a different copy of hours.bas")
+            sample = samples.get(fixture["path"])
+            if sample is not None and fixture["data"] != sample:
+                raise ValueError(f"{case['name']} uses a different copy of {fixture['path']}")
     with tempfile.TemporaryDirectory(prefix="gwbasic-check-") as directory:
         program = Path(directory, "BAD.BAS")
         for text, diagnostic in [
@@ -115,6 +116,8 @@ def check():
             ("10 NEXT I%\n20 SYSTEM\n", b"NEXT without FOR"),
             ("10 FOR I%=1 TO 2\n20 NEXT J%\n30 SYSTEM\n", b"does not match FOR"),
             ("10 FOR I%=1 TO 2\n20 SYSTEM\n", b"FOR without NEXT"),
+            ("10 PRINT (2+3\n20 SYSTEM\n", b"InvalidSyntax"),
+            ("10 IF 1 THEN 20 ELSE 30\n20 SYSTEM\n", b"jumps to missing line 30"),
         ]:
             program.write_text(text)
             executable = program.with_suffix("")

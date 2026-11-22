@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "passed": 11,
-  "total": 11,
+  "passed": 17,
+  "total": 17,
   "fallbacks": 0,
   "shadow_mismatches": 0,
   "cases": [
@@ -279,6 +279,126 @@
       "actual": {
         "termination": "exit:0",
         "stdout": "TE9PUCBDSEVDSwpJVEVNIDMgIDEgCklURU0gMyAgMiAKSVRFTSAyICAxIApJVEVNIDEgIDEgCkZJTkFMIENPVU5URVJTIDAgIDIgIDEgCg==",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "reorder-round-up",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "U1RPQ0sgUkVPUkRFUiBQTEFOTkVSClVOSVRTIE9OIEhBTkQ/IDE0ClRBUkdFVCBVTklUUz8gNTAKVU5JVFMgUEVSIENBU0U/IDEwCkNBU0VTIFRPIE9SREVSOiA0IAo=",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "U1RPQ0sgUkVPUkRFUiBQTEFOTkVSClVOSVRTIE9OIEhBTkQ/IDE0ClRBUkdFVCBVTklUUz8gNTAKVU5JVFMgUEVSIENBU0U/IDEwCkNBU0VTIFRPIE9SREVSOiA0IAo=",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "reorder-exact-cases",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "U1RPQ0sgUkVPUkRFUiBQTEFOTkVSClVOSVRTIE9OIEhBTkQ/IDE1ClRBUkdFVCBVTklUUz8gMzUKVU5JVFMgUEVSIENBU0U/IDUKQ0FTRVMgVE8gT1JERVI6IDQgCg==",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "U1RPQ0sgUkVPUkRFUiBQTEFOTkVSClVOSVRTIE9OIEhBTkQ/IDE1ClRBUkdFVCBVTklUUz8gMzUKVU5JVFMgUEVSIENBU0U/IDUKQ0FTRVMgVE8gT1JERVI6IDQgCg==",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "reorder-already-stocked",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "U1RPQ0sgUkVPUkRFUiBQTEFOTkVSClVOSVRTIE9OIEhBTkQ/IDQyClRBUkdFVCBVTklUUz8gMzUKVU5JVFMgUEVSIENBU0U/IDUKTk8gT1JERVIgTkVFREVECg==",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "U1RPQ0sgUkVPUkRFUiBQTEFOTkVSClVOSVRTIE9OIEhBTkQ/IDQyClRBUkdFVCBVTklUUz8gMzUKVU5JVFMgUEVSIENBU0U/IDUKTk8gT1JERVIgTkVFREVECg==",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "reorder-zero-case-size",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "U1RPQ0sgUkVPUkRFUiBQTEFOTkVSClVOSVRTIE9OIEhBTkQ/IDE0ClRBUkdFVCBVTklUUz8gNTAKVU5JVFMgUEVSIENBU0U/IDAKQ0FTRSBTSVpFIE1VU1QgQkUgUE9TSVRJVkUK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "U1RPQ0sgUkVPUkRFUiBQTEFOTkVSClVOSVRTIE9OIEhBTkQ/IDE0ClRBUkdFVCBVTklUUz8gNTAKVU5JVFMgUEVSIENBU0U/IDAKQ0FTRSBTSVpFIE1VU1QgQkUgUE9TSVRJVkUK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "reorder-negative-stock",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "U1RPQ0sgUkVPUkRFUiBQTEFOTkVSClVOSVRTIE9OIEhBTkQ/IC0xClRBUkdFVCBVTklUUz8gNTAKVU5JVFMgUEVSIENBU0U/IDEwClVOSVQgQ09VTlRTIE1VU1QgQkUgTk9OTkVHQVRJVkUK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "U1RPQ0sgUkVPUkRFUiBQTEFOTkVSClVOSVRTIE9OIEhBTkQ/IC0xClRBUkdFVCBVTklUUz8gNTAKVU5JVFMgUEVSIENBU0U/IDEwClVOSVQgQ09VTlRTIE1VU1QgQkUgTk9OTkVHQVRJVkUK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "expression-precedence-and-signs",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "UFJFQ0VERU5DRQogMTQgIDIwICAyIAogMSAgMiAKLTIgLTIgLTEgIDEgCi02ICA1ICAzICAwIC0xIAogMyAtNSAtMzI3NjggCiAwICA3IAotMSAgMCAtMSAtMSAtMSAKLTEgIDAgLTEgLTEgCkdPT0QgRkFMU0UKIDIgCiA0IAo=",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "UFJFQ0VERU5DRQogMTQgIDIwICAyIAogMSAgMiAKLTIgLTIgLTEgIDEgCi02ICA1ICAzICAwIC0xIAogMyAtNSAtMzI3NjggCiAwICA3IAotMSAgMCAtMSAtMSAtMSAKLTEgIDAgLTEgLTEgCkdPT0QgRkFMU0UKIDIgCiA0IAo=",
         "stderr": "",
         "files": [],
         "fallbacks": 0,
