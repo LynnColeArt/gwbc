@@ -12,6 +12,11 @@ COMPILER = ROOT / "zig-out" / "bin" / "gwbc"
 ORACLE_HASH = "ceb0c57c1c31981844a2e41b375cd14f77630e3e200419fe746b501d21dcf333"
 ISBN_HASH = "4b75f35594c8f9f8082d60b2b185befd14372759ff0a07479a3782fb85836db2"
 FAHRENHEIT_HASH = "52d6ec00ad4db676e0155d77776707a355a86655bba71e9bed6345bc376cc3a1"
+TOKENIZED_HASHES = {
+    "FAHTOK.BAS": "8def4bef27868225cd930b10c607392f6c64451034d6b11590b803f386c1e464",
+    "GCDTOK.BAS": "cb22333a5339fd75e172007afc8d64de53b5526f682d6fe1fc542dadd4498ab2",
+    "NUMTOK.BAS": "3804af29827fd3158754454407f5b4e3d775984d66b5ec1ac637fc85f4af947e",
+}
 
 
 def source_path(program):
@@ -19,6 +24,8 @@ def source_path(program):
         source, expected = ROOT / ".ziggify/oracle/ISBN.BAS", ISBN_HASH
     elif program == "FAHREN.BAS":
         source, expected = ROOT / "fahrenheit.bas", FAHRENHEIT_HASH
+    elif program in TOKENIZED_HASHES:
+        source, expected = ROOT / "fixtures/tokenized" / program, TOKENIZED_HASHES[program]
     else:
         return Path(program)
     if hashlib.sha256(source.read_bytes()).hexdigest() != expected:
@@ -81,7 +88,7 @@ def original(program, mode="file"):
         guest = Path(directory)
         (guest / "GWBASIC.EXE").write_bytes(payload)
         source = source_path(program).read_bytes()
-        if program != "ISBN.BAS":
+        if program != "ISBN.BAS" and not source.startswith((b"\xff", b"\xfe")):
             source = b"\r\n".join(source.splitlines()) + b"\r\n"
         (guest / "INPUT.BAS").write_bytes(source)
         command = "gwbasic input.bas"
@@ -138,6 +145,8 @@ def check():
                 raise ValueError(f"{case['name']} uses a different copy of {fixture['path']}")
     with tempfile.TemporaryDirectory(prefix="gwbasic-check-") as directory:
         program = Path(directory, "BAD.BAS")
+        invalid_links = bytearray(source_path("FAHTOK.BAS").read_bytes())
+        invalid_links[1] ^= 1
         for text, diagnostic in [
             ("10 GOTO 40\n20 SYSTEM\n", b"jumps to missing line 40"),
             ("10 SCREEN 1\n20 SYSTEM\n", b"UnsupportedStatement"),
@@ -152,8 +161,14 @@ def check():
             ('10 LET X%=MID$("text",1,1)\n20 SYSTEM\n', b"TypeMismatch"),
             ('10 IF "text" THEN 20\n20 SYSTEM\n', b"TypeMismatch"),
             ("10 PRINT 12345678\n20 SYSTEM\n", b"UnsupportedDouble"),
+            (bytes(invalid_links), b"InvalidTokenizedLink"),
+            (b"\xff\x01", b"TruncatedTokenizedProgram"),
+            (b"\xff\x01\x09\x0a\x00\x91\x1d\x00\x00", b"TruncatedTokenizedProgram"),
+            (b"\xff\x01\x09\x0a\x00\xfe\x01", b"UnsupportedProgramToken"),
+            (b"\xff\x01\x09\x0a\x00\x91\x1f" + bytes(8), b"UnsupportedTokenizedDouble"),
+            (b"\xfe\x00", b"ProtectedBasicProgram"),
         ]:
-            program.write_text(text)
+            program.write_bytes(text.encode() if isinstance(text, str) else text)
             executable = program.with_suffix("")
             result = subprocess.run([COMPILER, program, "-o", executable], capture_output=True, check=False)
             if result.returncode != 1 or result.stdout or diagnostic not in result.stderr:

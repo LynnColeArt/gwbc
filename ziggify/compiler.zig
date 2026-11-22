@@ -2,6 +2,7 @@ const std = @import("std");
 const Writer = std.Io.Writer;
 const Allocator = std.mem.Allocator;
 const Number = @import("numeric.zig").Number;
+const tokenized = @import("tokenized.zig");
 
 const ValueKind = enum { number, string };
 const Variable = struct {
@@ -739,7 +740,12 @@ pub fn main(init: std.process.Init) !void {
         const output_path = try std.fs.path.resolve(allocator, &.{args[3]});
         if (std.mem.eql(u8, input_path, output_path)) return error.OutputIsInput;
     }
-    const source = try std.Io.Dir.cwd().readFileAlloc(init.io, input, allocator, .limited(1024 * 1024));
+    const bytes = try std.Io.Dir.cwd().readFileAlloc(init.io, input, allocator, .limited(1024 * 1024));
+    const source = tokenized.sourceText(allocator, bytes, &diagnostic.interface) catch |err| {
+        try diagnostic.interface.print("gwbc: {s}\n", .{@errorName(err)});
+        try diagnostic.interface.flush();
+        std.process.exit(1);
+    };
     var generated: Writer.Allocating = .init(allocator);
     compile(allocator, source, &generated.writer, &diagnostic.interface) catch |err| {
         try diagnostic.interface.print("gwbc: {s}\n", .{@errorName(err)});

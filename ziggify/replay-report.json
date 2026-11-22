@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "passed": 30,
-  "total": 30,
+  "passed": 34,
+  "total": 34,
   "fallbacks": 0,
   "shadow_mismatches": 0,
   "cases": [
@@ -659,6 +659,86 @@
       "actual": {
         "termination": "exit:0",
         "stdout": "RlJBQ1RJT04/IDIuNzUKUk9VTkQgVE8gSU5URUdFUj8gLTIuNQogMi43NSAtMyAgMi41ICAuMTQyODU3MiAgMzI3NjggIDYwMDAwIAogLjAwMDAwMDEgIDFFLTA4ICAxMDAwMDAwICAxRSswNyAgMS4yMzQ1NjdFLTA2IAogMSAtMSAgMiAgMTIuNSAKIC41IAogMSAKIDEuNSAK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "tokenized-fahrenheit",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "RU5URVIgQSBGQUhSRU5IRUlUIFRFTVBFUkFUVVJFMzcuNQogMzcuNSAgREVHUkVFUyBGQUhSRU5IRUlUIEVRVUFMUyAgMy4wNTU1NTYgIERFR1JFRVMgQ0VMU0lVUwo=",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "RU5URVIgQSBGQUhSRU5IRUlUIFRFTVBFUkFUVVJFMzcuNQogMzcuNSAgREVHUkVFUyBGQUhSRU5IRUlUIEVRVUFMUyAgMy4wNTU1NTYgIERFR1JFRVMgQ0VMU0lVUwo=",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "tokenized-gcd",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "R1JFQVRFU1QgQ09NTU9OIERJVklTT1IKRklSU1QgVkFMVUU/IDI3MApTRUNPTkQgVkFMVUU/IDE5MgpDT01NT04gRElWSVNPUjogNiAK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "R1JFQVRFU1QgQ09NTU9OIERJVklTT1IKRklSU1QgVkFMVUU/IDI3MApTRUNPTkQgVkFMVUU/IDE5MgpDT01NT04gRElWSVNPUjogNiAK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "tokenized-numbers-string-branch",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "TlVNQkVSUzogSUYgVEhFTiBFTFNFCiAyNTUgIDI1NiAgMzI3NjcgLTMyNzY4ICAyLjUgIDFFLTA4IApWQUxVRT8gQVgKQQo=",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "TlVNQkVSUzogSUYgVEhFTiBFTFNFCiAyNTUgIDI1NiAgMzI3NjcgLTMyNzY4ICAyLjUgIDFFLTA4IApWQUxVRT8gQVgKQQo=",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "tokenized-numbers-numeric-branch",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "TlVNQkVSUzogSUYgVEhFTiBFTFNFCiAyNTUgIDI1NiAgMzI3NjcgLTMyNzY4ICAyLjUgIDFFLTA4IApWQUxVRT8gMi41CiAyLjUgCg==",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "TlVNQkVSUzogSUYgVEhFTiBFTFNFCiAyNTUgIDI1NiAgMzI3NjcgLTMyNzY4ICAyLjUgIDFFLTA4IApWQUxVRT8gMi41CiAyLjUgCg==",
         "stderr": "",
         "files": [],
         "fallbacks": 0,

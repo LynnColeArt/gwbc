@@ -58,3 +58,10 @@ is a separate test dependency. The replay runner checks its SHA-256 before use.
   implements these rules in Zig and the DOS replay supplies the expected output.
   https://github.com/microsoft/GW-BASIC/blob/master/MATH1.ASM
   https://github.com/microsoft/GW-BASIC/blob/master/MATH2.ASM
+- Microsoft's `IBMRES.ASM` supplies the keyword and operator assignments.
+  `GWMAIN.ASM` and `GWLIST.ASM` describe the packed lines and numeric
+  constants. Files captured with `SAVE` under the pinned DOS binary established
+  the line links, hidden separators, and record padding used by the decoder.
+  https://github.com/microsoft/GW-BASIC/blob/master/IBMRES.ASM
+  https://github.com/microsoft/GW-BASIC/blob/master/GWMAIN.ASM
+  https://github.com/microsoft/GW-BASIC/blob/master/GWLIST.ASM

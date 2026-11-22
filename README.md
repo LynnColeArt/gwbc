@@ -54,7 +54,8 @@ printf '270\n192\n' | "$DEMO_DIR/gcd"
 
 ## Supported source
 
-Use printable ASCII with one statement per numbered line. Native programs
+Use printable ASCII text or an unprotected GW-BASIC tokenized file with one
+statement per numbered line. Native programs
 finish at end of source, `END`, or `SYSTEM`. The compiler supports `REM` and
 apostrophe comments, assignment with or without `LET`, and `GOTO`.
 `IF … THEN … [ELSE …]` accepts a line number, assignment, or `PRINT` in
@@ -91,7 +92,7 @@ Sequential file output uses
 CRLF, end-of-file markers, and record bytes.
 
 Multiple input fields, comma-separated output zones, trailing
-semicolons on `PRINT`, tokenized and protected program files, MBF arithmetic,
+semicolons on `PRINT`, protected program files, MBF arithmetic,
 arrays, graphics, sound, and general runtime diagnostic parity
 remain outside the verified subset.
 
@@ -130,6 +131,28 @@ zig-out/bin/gwbc fahrenheit.bas -o "$DEMO_DIR/fahrenheit"
 printf '98.6\n' | "$DEMO_DIR/fahrenheit"
 ```
 
+## Compile a tokenized save
+
+GW-BASIC's ordinary `SAVE` writes tokenized source. `gwbc` detects that format
+from the file header and compiles it through the same parser as ASCII source.
+It checks the saved line links and decodes the compiler's existing keyword
+subset, embedded line targets, integers, and representable MBF single literals.
+Protected files and embedded double-precision constants produce explicit errors.
+
+```sh
+zig build -Doptimize=ReleaseSafe
+DEMO_DIR=$(mktemp -d)
+zig-out/bin/gwbc fixtures/tokenized/FAHTOK.BAS -o "$DEMO_DIR/fahrenheit"
+printf '37.5\n' | "$DEMO_DIR/fahrenheit"
+```
+
+The three files under [fixtures/tokenized](fixtures/tokenized) are unchanged DOS
+saves. To create an equivalent save, load its ASCII listing in the pinned DOS
+interpreter and run `SAVE "FAHTOK.BAS"` or the corresponding fixture name. The source
+listings are `fahrenheit.bas`, `gcd.bas`, and
+`fixtures/tokenized/numbers-source.bas`. Ziggify verifies each binary's
+SHA-256 and passes the same file bytes to both implementations.
+
 ## Replay against the DOS reference
 
 The reference is T.K. Chia's [2026-10-05 build](https://codeberg.org/tkchia/GW-BASIC/releases/tag/20261005)
@@ -163,7 +186,8 @@ ziggify gate .
 `DOSBOX` and `GWBASIC_EXE` can point to absolute paths for local installations.
 The corpus has four transcripts from `hours.bas`, five from `reorder.bas`,
 two from `gcd.bas`, four from the archived `ISBN.BAS`, four from
-`fahrenheit.bas`, five focused console cases, and six file cases. The runner
+`fahrenheit.bas`, five focused console cases, six file cases, and four cases
+that run the DOS tokenized saves. The runner
 verifies the archive fixtures' SHA-256. It adapts the converter's line endings
 for DOS and supplies `SYSTEM` after each archived program finishes. The
 interpreter prompt and command echo are outside the program transcript.

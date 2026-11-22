@@ -749,6 +749,86 @@
       ],
       "body": "",
       "body_base64": false
+    },
+    {
+      "name": "tokenized-fahrenheit",
+      "args": [
+        "FAHTOK.BAS",
+        "console-end"
+      ],
+      "stdin": "37.5\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "tokenized-gcd",
+      "args": [
+        "GCDTOK.BAS",
+        "console"
+      ],
+      "stdin": "270\n192\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "tokenized-numbers-string-branch",
+      "args": [
+        "NUMTOK.BAS",
+        "console"
+      ],
+      "stdin": "AX\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "tokenized-numbers-numeric-branch",
+      "args": [
+        "NUMTOK.BAS",
+        "console"
+      ],
+      "stdin": "2.5\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
     }
   ],
   "timeout_ms": 45000,
