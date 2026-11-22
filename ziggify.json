@@ -1,0 +1,196 @@
+{
+  "version": 1,
+  "transport": "cli",
+  "original": [
+    "python3",
+    "{root}/run_case.py",
+    "original"
+  ],
+  "candidate": [
+    "python3",
+    "{root}/run_case.py",
+    "native"
+  ],
+  "cases": [
+    {
+      "name": "hello",
+      "args": [
+        "INPUT.BAS"
+      ],
+      "stdin": "",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "INPUT.BAS",
+          "data": "10 OPEN \"OUT.TXT\" FOR OUTPUT AS #1\n20 PRINT #1,\"HELLO FROM 1983\"\n30 CLOSE #1\n40 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [
+        "OUT.TXT"
+      ],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "loop",
+      "args": [
+        "INPUT.BAS"
+      ],
+      "stdin": "",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "INPUT.BAS",
+          "data": "10 OPEN \"OUT.TXT\" FOR OUTPUT AS #1\n20 LET I% = -2\n30 PRINT #1,I%\n40 LET I% = I% + 1\n50 IF I% < 3 THEN 30\n60 GOTO 80\n70 PRINT #1,\"UNREACHABLE\"\n80 CLOSE #1\n90 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [
+        "OUT.TXT"
+      ],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "record-overlap",
+      "args": [
+        "INPUT.BAS"
+      ],
+      "stdin": "",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "INPUT.BAS",
+          "data": "10 OPEN \"OUT.TXT\" FOR OUTPUT AS #1\n20 PRINT #1,\"01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789\"\n30 PRINT #1,\"C:\\BASIC: [A]; END OF STRING\"\n40 PRINT #1,32767\n50 PRINT #1,-32768\n60 CLOSE #1\n70 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [
+        "OUT.TXT"
+      ],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "empty-output",
+      "args": [
+        "INPUT.BAS"
+      ],
+      "stdin": "",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "INPUT.BAS",
+          "data": "10 OPEN \"OUT.TXT\" FOR OUTPUT AS #1\n20 CLOSE #1\n30 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [
+        "OUT.TXT"
+      ],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "record-boundary",
+      "args": [
+        "INPUT.BAS"
+      ],
+      "stdin": "",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "INPUT.BAS",
+          "data": "10 OPEN \"OUT.TXT\" FOR OUTPUT AS #1\n20 PRINT #1,\"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\"\n30 CLOSE #1\n40 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [
+        "OUT.TXT"
+      ],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "line-order",
+      "args": [
+        "INPUT.BAS"
+      ],
+      "stdin": "",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "INPUT.BAS",
+          "data": "50 SYSTEM\n40 CLOSE #1\n30 print #1,a%\n10 open \"out.txt\" for output as #1\n20 rem a% begins at zero\n",
+          "base64": false
+        }
+      ],
+      "watch": [
+        "OUT.TXT"
+      ],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    }
+  ],
+  "timeout_ms": 45000,
+  "output_limit": 16777216,
+  "port": 18767,
+  "build": [
+    "python3",
+    "{root}/run_case.py",
+    "build"
+  ],
+  "check": [
+    "python3",
+    "{root}/run_case.py",
+    "check"
+  ],
+  "routes": [],
+  "units": [],
+  "lifted": false,
+  "http_routes": [],
+  "proxy_timeout_ms": 5000
+}

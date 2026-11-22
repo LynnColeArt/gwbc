@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "contract_sha256": "aa5d5973d3fc5a49fd756e918ad2ea46ecddc86fadcc63633443acb2355fc7d9",
+  "observations": [
+    {
+      "termination": "exit:0",
+      "stdout": "",
+      "stderr": "",
+      "files": [
+        {
+          "path": "OUT.TXT",
+          "data": "SEVMTE8gRlJPTSAxOTgzDQoaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        }
+      ],
+      "fallbacks": 0,
+      "shadow_mismatches": 0
+    },
+    {
+      "termination": "exit:0",
+      "stdout": "",
+      "stderr": "",
+      "files": [
+        {
+          "path": "OUT.TXT",
+          "data": "LTIgDQotMSANCiAwIA0KIDEgDQogMiANChoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        }
+      ],
+      "fallbacks": 0,
+      "shadow_mismatches": 0
+    },
+    {
+      "termination": "exit:0",
+      "stdout": "",
+      "stderr": "",
+      "files": [
+        {
+          "path": "OUT.TXT",
+          "data": "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkNCkM6XEJBU0lDOiBbQV07IEVORCBPRiBTVFJJTkcNCiAzMjc2NyANCi0zMjc2OCANChozNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OQ0KQzpcQkFTSUM6IFtBXTsgRQ=="
+        }
+      ],
+      "fallbacks": 0,
+      "shadow_mismatches": 0
+    },
+    {
+      "termination": "exit:0",
+      "stdout": "",
+      "stderr": "",
+      "files": [
+        {
+          "path": "OUT.TXT",
+          "data": "GgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        }
+      ],
+      "fallbacks": 0,
+      "shadow_mismatches": 0
+    },
+    {
+      "termination": "exit:0",
+      "stdout": "",
+      "stderr": "",
+      "files": [
+        {
+          "path": "OUT.TXT",
+          "data": "WFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFgNCho="
+        }
+      ],
+      "fallbacks": 0,
+      "shadow_mismatches": 0
+    },
+    {
+      "termination": "exit:0",
+      "stdout": "",
+      "stderr": "",
+      "files": [
+        {
+          "path": "OUT.TXT",
+          "data": "IDAgDQoaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        }
+      ],
+      "fallbacks": 0,
+      "shadow_mismatches": 0
+    }
+  ]
+}

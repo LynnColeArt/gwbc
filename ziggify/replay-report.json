@@ -1,0 +1,189 @@
+{
+  "version": 1,
+  "passed": 6,
+  "total": 6,
+  "fallbacks": 0,
+  "shadow_mismatches": 0,
+  "cases": [
+    {
+      "name": "hello",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "",
+        "stderr": "",
+        "files": [
+          {
+            "path": "OUT.TXT",
+            "data": "SEVMTE8gRlJPTSAxOTgzDQoaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+          }
+        ],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "",
+        "stderr": "",
+        "files": [
+          {
+            "path": "OUT.TXT",
+            "data": "SEVMTE8gRlJPTSAxOTgzDQoaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+          }
+        ],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "loop",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "",
+        "stderr": "",
+        "files": [
+          {
+            "path": "OUT.TXT",
+            "data": "LTIgDQotMSANCiAwIA0KIDEgDQogMiANChoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+          }
+        ],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "",
+        "stderr": "",
+        "files": [
+          {
+            "path": "OUT.TXT",
+            "data": "LTIgDQotMSANCiAwIA0KIDEgDQogMiANChoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+          }
+        ],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "record-overlap",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "",
+        "stderr": "",
+        "files": [
+          {
+            "path": "OUT.TXT",
+            "data": "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkNCkM6XEJBU0lDOiBbQV07IEVORCBPRiBTVFJJTkcNCiAzMjc2NyANCi0zMjc2OCANChozNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OQ0KQzpcQkFTSUM6IFtBXTsgRQ=="
+          }
+        ],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "",
+        "stderr": "",
+        "files": [
+          {
+            "path": "OUT.TXT",
+            "data": "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkNCkM6XEJBU0lDOiBbQV07IEVORCBPRiBTVFJJTkcNCiAzMjc2NyANCi0zMjc2OCANChozNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OQ0KQzpcQkFTSUM6IFtBXTsgRQ=="
+          }
+        ],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "empty-output",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "",
+        "stderr": "",
+        "files": [
+          {
+            "path": "OUT.TXT",
+            "data": "GgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+          }
+        ],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "",
+        "stderr": "",
+        "files": [
+          {
+            "path": "OUT.TXT",
+            "data": "GgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+          }
+        ],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "record-boundary",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "",
+        "stderr": "",
+        "files": [
+          {
+            "path": "OUT.TXT",
+            "data": "WFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFgNCho="
+          }
+        ],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "",
+        "stderr": "",
+        "files": [
+          {
+            "path": "OUT.TXT",
+            "data": "WFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFgNCho="
+          }
+        ],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "line-order",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "",
+        "stderr": "",
+        "files": [
+          {
+            "path": "OUT.TXT",
+            "data": "IDAgDQoaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+          }
+        ],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "",
+        "stderr": "",
+        "files": [
+          {
+            "path": "OUT.TXT",
+            "data": "IDAgDQoaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+          }
+        ],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    }
+  ]
+}
