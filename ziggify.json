@@ -537,6 +537,112 @@
       ],
       "body": "",
       "body_base64": false
+    },
+    {
+      "name": "string-input-quotes-and-retry",
+      "args": [
+        "STRINGS.BAS",
+        "console"
+      ],
+      "stdin": "a,b\n\" a,b \"\n7\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "STRINGS.BAS",
+          "data": "10 INPUT \"TEXT\"; A$\n20 INPUT \"NUMBER\"; X%\n30 PRINT \"[\";A$;\"]\";LEN(A$);X%\n40 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "isbn-hyphenated-valid",
+      "args": [
+        "ISBN.BAS",
+        "console-end"
+      ],
+      "stdin": "0-306-40615-2\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "isbn-wrong-check-digit",
+      "args": [
+        "ISBN.BAS",
+        "console-end"
+      ],
+      "stdin": "0-306-40615-3\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "isbn-uppercase-x",
+      "args": [
+        "ISBN.BAS",
+        "console-end"
+      ],
+      "stdin": "0-8044-2957-X\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "isbn-lowercase-x",
+      "args": [
+        "ISBN.BAS",
+        "console-end"
+      ],
+      "stdin": "0-8044-2957-x\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
     }
   ],
   "timeout_ms": 45000,

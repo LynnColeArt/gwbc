@@ -39,9 +39,13 @@ is a separate test dependency. The replay runner checks its SHA-256 before use.
 - The Microsoft GW-BASIC reference describes `GOSUB`, plain `RETURN`, and
   `RETURN line`. Loop unwinding was checked against the pinned DOS binary:
   https://www.bitsavers.org/pdf/mindset/100213-001_GW-BASIC_Reference_Manual_1984.pdf
-- Frank Cox's archived `ISBN.BAS` was tested unchanged with the DOS oracle,
+- Frank Cox's archived `ISBN.BAS` was tested unchanged with both the native
+  compiler and DOS oracle,
   including a `SYSTEM` command supplied at the interpreter prompt after the
   listing completed. Its SHA-256 is
   `4b75f35594c8f9f8082d60b2b185befd14372759ff0a07479a3782fb85836db2`.
   The listing is an external compatibility target:
   https://github.com/robhagemans/hoard-of-gwbasic/blob/d4e65c52d782ba03f69fb15ea7a97a9b13e41bdd/AllBasicCode/ISBN.BAS
+- The Microsoft GW-BASIC Interpreter User's Reference documents string
+  `INPUT`, including quoted strings with commas or surrounding spaces:
+  https://www.bitsavers.org/pdf/microsoft/gw-basic/410130013-320-R01-0686_Microsoft_GW-BASIC_Interpreter_Users_Reference_1986.pdf

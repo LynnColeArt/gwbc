@@ -10,11 +10,25 @@ import tempfile
 ROOT = Path(__file__).resolve().parent
 COMPILER = ROOT / "zig-out" / "bin" / "gwbc"
 ORACLE_HASH = "ceb0c57c1c31981844a2e41b375cd14f77630e3e200419fe746b501d21dcf333"
+ISBN_HASH = "4b75f35594c8f9f8082d60b2b185befd14372759ff0a07479a3782fb85836db2"
 
 
-def stage_console(guest):
+def source_path(program):
+    if program != "ISBN.BAS":
+        return Path(program)
+    source = ROOT / ".ziggify/oracle/ISBN.BAS"
+    if hashlib.sha256(source.read_bytes()).hexdigest() != ISBN_HASH:
+        raise ValueError("ISBN.BAS does not match Frank Cox's pinned archived listing")
+    return source
+
+
+def stage_console(guest, prompt_exit):
     raw = sys.stdin.buffer.read(513)
     keys = raw.replace(b"\r\n", b"\n").replace(b"\n", b"\r")
+    if prompt_exit:
+        if keys and not keys.endswith(b"\r"):
+            raise ValueError("DOS program input must end with a return before the prompt exit")
+        keys += b"SYSTEM\r"
     if len(keys) > 256 or any(byte != 13 and not 32 <= byte <= 126 for byte in keys):
         raise ValueError("console fixture must use at most 256 printable ASCII keystrokes and returns")
     (guest / "KEYS.TXT").write_bytes(keys)
@@ -26,7 +40,7 @@ def stage_console(guest):
     )
 
 
-def console_transcript(trace):
+def console_transcript(trace, prompt_exit):
     if not trace or len(trace) % 3:
         raise ValueError("DOS oracle produced an empty or incomplete console trace")
     transcript = bytearray()
@@ -34,15 +48,23 @@ def console_transcript(trace):
     for next_column, next_row, byte in zip(trace[::3], trace[1::3], trace[2::3]):
         if (next_row, next_column) < (row, column) or next_column >= 79 or next_row >= 24:
             raise ValueError("DOS oracle requires sequential text within the first screen")
-        if not 32 <= byte <= 126:
-            raise ValueError("DOS oracle requires printable ASCII output")
         if next_row > row:
             transcript.extend(b"\n" * (next_row - row))
             row, column = next_row, 0
         transcript.extend(b" " * (next_column - column))
         transcript.append(byte)
         column = next_column + 1
-    return bytes(transcript) + b"\n"
+    transcript.append(10)
+    if prompt_exit:
+        # These rows come from GW-BASIC's direct-mode prompt after the listing
+        # ends. Require the exact suffix before excluding it from program output.
+        suffix = b"\nOk\xff\nSYSTEM\n"
+        if not transcript.endswith(suffix):
+            raise ValueError("DOS oracle did not return to the expected interpreter prompt")
+        del transcript[-len(suffix) + 1:]
+    if any(byte != 10 and not 32 <= byte <= 126 for byte in transcript):
+        raise ValueError("DOS oracle requires printable ASCII output")
+    return bytes(transcript)
 
 
 def original(program, mode="file"):
@@ -54,10 +76,15 @@ def original(program, mode="file"):
     with tempfile.TemporaryDirectory(prefix="gwbasic-dos-") as directory:
         guest = Path(directory)
         (guest / "GWBASIC.EXE").write_bytes(payload)
-        (guest / "INPUT.BAS").write_bytes(b"\r\n".join(Path(program).read_bytes().splitlines()) + b"\r\n")
+        source = source_path(program).read_bytes()
+        if program != "ISBN.BAS":
+            source = b"\r\n".join(source.splitlines()) + b"\r\n"
+        (guest / "INPUT.BAS").write_bytes(source)
         command = "gwbasic input.bas"
-        if mode == "console":
-            stage_console(guest)
+        console = mode in ("console", "console-end")
+        prompt_exit = mode == "console-end"
+        if console:
+            stage_console(guest, prompt_exit)
             command = "console.com"
         config = guest / "dosbox.conf"
         config.write_text("[sdl]\noutput=surface\n[mixer]\nnosound=true\n[midi]\nmididevice=none\n")
@@ -67,11 +94,11 @@ def original(program, mode="file"):
              "-c", 'mount c "."', "-c", "c:", "-c", command, "-c", "exit"],
             cwd=guest, env=env, capture_output=True, timeout=12, check=True,
         )
-        if mode == "console":
+        if console:
             trace = guest / "TRACE.BIN"
             if not trace.is_file():
                 raise ValueError(f"DOS console launcher failed to capture the program\n{result.stdout.decode(errors='replace')}")
-            sys.stdout.buffer.write(console_transcript(trace.read_bytes()))
+            sys.stdout.buffer.write(console_transcript(trace.read_bytes(), prompt_exit))
             return
         output = guest / "OUT.TXT"
         if not output.is_file():
@@ -93,7 +120,7 @@ def build():
 def native(program, _mode="file"):
     with tempfile.TemporaryDirectory(prefix="gwbasic-native-") as directory:
         executable = Path(directory, "program")
-        subprocess.run([COMPILER, program, "-o", executable], check=True)
+        subprocess.run([COMPILER, source_path(program), "-o", executable], check=True)
         subprocess.run([executable], check=True)
 
 
@@ -118,6 +145,8 @@ def check():
             ("10 IF 1 THEN 20 ELSE 30\n20 SYSTEM\n", b"jumps to missing line 30"),
             ("10 GOSUB 40\n20 SYSTEM\n", b"jumps to missing line 40"),
             ("10 RETURN 40\n20 SYSTEM\n", b"jumps to missing line 40"),
+            ('10 LET X%=MID$("text",1,1)\n20 SYSTEM\n', b"TypeMismatch"),
+            ('10 IF "text" THEN 20\n20 SYSTEM\n', b"TypeMismatch"),
         ]:
             program.write_text(text)
             executable = program.with_suffix("")

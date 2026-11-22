@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "passed": 20,
-  "total": 20,
+  "passed": 25,
+  "total": 25,
   "fallbacks": 0,
   "shadow_mismatches": 0,
   "cases": [
@@ -459,6 +459,106 @@
       "actual": {
         "termination": "exit:0",
         "stdout": "U1VCUk9VVElORSBMT09QUwpJTk5FUiA4IApPVVRFUiAxIApJTk5FUiA4IApPVVRFUiAyIApORVNURUQgQ0FMTApJTk5FUiBSRVRVUk4gUkVTVE9SRUQgQ0FMTEVSClJFVFVSTiBUQVJHRVQgUkVBQ0hFRAo=",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "string-input-quotes-and-retry",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "VEVYVD8gYSxiCj9SZWRvIGZyb20gc3RhcnQKVEVYVD8gIiBhLGIgIgpOVU1CRVI/IDcKWyBhLGIgXSA1ICA3IAo=",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "VEVYVD8gYSxiCj9SZWRvIGZyb20gc3RhcnQKVEVYVD8gIiBhLGIgIgpOVU1CRVI/IDcKWyBhLGIgXSA1ICA3IAo=",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "isbn-hyphenated-valid",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "SW5wdXQgSVNCTiBOdW1iZXI/IDAtMzA2LTQwNjE1LTIKT0sK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "SW5wdXQgSVNCTiBOdW1iZXI/IDAtMzA2LTQwNjE1LTIKT0sK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "isbn-wrong-check-digit",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "SW5wdXQgSVNCTiBOdW1iZXI/IDAtMzA2LTQwNjE1LTMKRXJyb3IK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "SW5wdXQgSVNCTiBOdW1iZXI/IDAtMzA2LTQwNjE1LTMKRXJyb3IK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "isbn-uppercase-x",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "SW5wdXQgSVNCTiBOdW1iZXI/IDAtODA0NC0yOTU3LVgKT0sK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "SW5wdXQgSVNCTiBOdW1iZXI/IDAtODA0NC0yOTU3LVgKT0sK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "isbn-lowercase-x",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "SW5wdXQgSVNCTiBOdW1iZXI/IDAtODA0NC0yOTU3LXgKT0sK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "SW5wdXQgSVNCTiBOdW1iZXI/IDAtODA0NC0yOTU3LXgKT0sK",
         "stderr": "",
         "files": [],
         "fallbacks": 0,

@@ -54,10 +54,11 @@ printf '270\n192\n' | "$DEMO_DIR/gcd"
 
 ## Supported source
 
-Use printable ASCII with one statement per numbered line and a final
-`SYSTEM`. The compiler supports `REM` and apostrophe comments, signed 16-bit
-integers in one-letter variables such as `I%`, `LET`, `GOTO`, and
-`IF … THEN line [ELSE line]`. `GOSUB line` supports nested calls with shared
+Use printable ASCII with one statement per numbered line. Native programs
+finish at end of source, `END`, or `SYSTEM`. The compiler supports `REM` and
+apostrophe comments, assignment with or without `LET`, and `GOTO`.
+`IF … THEN … [ELSE …]` accepts a line number, assignment, or `PRINT` in
+each branch. `GOSUB line` supports nested calls with shared
 variables. `RETURN` resumes the most recent caller and `RETURN line` discards
 that call before jumping to the given line. Returning discards loops entered
 inside the subroutine and preserves the caller's active loops. The compiler
@@ -67,31 +68,48 @@ variables and optional variable names on `NEXT`.
 Assignments, `IF`, `PRINT`, and loop bounds and steps accept integer
 expressions. They support parentheses, unary signs, multiplication,
 integer division (`\`), `MOD`, addition and subtraction, and numeric
-comparisons. Comparisons produce `-1` when true and `0` when false. Intermediate
-arithmetic results must fit in a signed 16-bit integer. Single-precision
-promotion on overflow remains outside this slice.
+comparisons, and bitwise `AND` and `OR`. Comparisons produce `-1` when true
+and `0` when false. Both explicit `%` variables and unsuffixed numeric
+variables in this compiler use signed 16-bit values. The DOS interpreter's
+default single precision, including overflow promotion, remains outside this
+slice.
 
-`PRINT` supports newline-terminated strings and integers separated by semicolons
-and preserves GW-BASIC's numeric spacing. `INPUT` reads one signed decimal
-integer from a line, supports an optional quoted prompt with the comma or
-semicolon separator, treats a blank answer as zero, and repeats the prompt
-after nonnumeric text. Native console I/O uses standard streams and LF.
+`PRINT` supports newline-terminated strings and integers separated by
+semicolons and preserves GW-BASIC's numeric spacing. `INPUT` reads one value
+into a numeric variable or a `$` string variable. String input trims
+unquoted outer spaces and accepts quoted fields containing commas and
+outer spaces. Both forms support a quoted prompt with the comma or
+semicolon separator. The runtime also supports string concatenation and
+comparison, `LEN`, `MID$(text, start, count)`, `RIGHT$`, and integer
+decimal prefixes in `VAL`. Native console I/O uses standard streams and LF.
 Sequential file output uses
 `OPEN "OUT.TXT" FOR OUTPUT AS #1`, `PRINT #1,`, and `CLOSE #1` with DOS
 CRLF, end-of-file markers, and record bytes.
 
-String and floating-point input, comma-separated output zones, trailing
+Floating-point input, multiple input fields, comma-separated output zones, trailing
 semicolons on `PRINT`, tokenized and protected program files, MBF arithmetic,
 arrays, graphics, sound, and general runtime diagnostic parity
 remain outside the verified subset.
 
-## Archived program target
+## Run Frank Cox's archived ISBN checker
 
 Frank Cox's [ISBN checksum utility](https://github.com/robhagemans/hoard-of-gwbasic/blob/d4e65c52d782ba03f69fb15ea7a97a9b13e41bdd/AllBasicCode/ISBN.BAS)
-runs unchanged under the DOS reference. The first native compiler error is
-its string `INPUT`. The listing also needs string variables and functions,
-implicit numeric variables, logical operators, inline `IF` statements, and
-end-of-program handling for listings that return to the interpreter prompt.
+compiles unchanged. Fetch the pinned listing and compile it from the
+repository root:
+
+```sh
+zig build -Doptimize=ReleaseSafe
+mkdir -p .ziggify/oracle
+curl -fsSL \
+  https://raw.githubusercontent.com/robhagemans/hoard-of-gwbasic/d4e65c52d782ba03f69fb15ea7a97a9b13e41bdd/AllBasicCode/ISBN.BAS \
+  -o .ziggify/oracle/ISBN.BAS
+DEMO_DIR=$(mktemp -d)
+zig-out/bin/gwbc .ziggify/oracle/ISBN.BAS -o "$DEMO_DIR/isbn"
+printf '0-306-40615-2\n' | "$DEMO_DIR/isbn"
+```
+
+The archive prints `OK` for this input. Ziggify also checks a wrong check
+digit and both uppercase and lowercase `X` check digits.
 
 ## Replay against the DOS reference
 
@@ -110,8 +128,9 @@ last visible row are outside the capture. File fixtures compare complete
 `OUT.TXT` bytes. Ziggify also compares exit status and both output streams.
 
 Install [Ziggify](https://github.com/LynnColeArt/ziggify/releases/tag/v0.2.0-alpha.1),
-DOSBox, GNU binutils, Python 3, and Zig 0.16.0. With `ziggify` on PATH,
-run from the repository root:
+DOSBox, GNU binutils, Python 3, and Zig 0.16.0. Download the archived
+`ISBN.BAS` as shown above. With `ziggify` on PATH, run from the repository
+root:
 
 ```sh
 mkdir -p .ziggify/oracle
@@ -124,6 +143,9 @@ ziggify gate .
 
 `DOSBOX` and `GWBASIC_EXE` can point to absolute paths for local installations.
 The corpus has four transcripts from `hours.bas`, five from `reorder.bas`,
-two from `gcd.bas`, three focused console cases for loops, expressions and
-subroutine returns, and six file cases covering strings, integers, branches,
-line order, and record boundaries.
+two from `gcd.bas`, four from the archived `ISBN.BAS`, four focused console
+cases for loops, expressions, subroutine returns and string input, and six file
+cases. The runner verifies the archived listing's SHA-256 and gives both
+implementations the same bytes. In DOS it supplies `SYSTEM` after the listing
+finishes and excludes the interpreter prompt and command echo from the
+comparison.
