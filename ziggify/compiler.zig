@@ -85,6 +85,8 @@ const Statement = union(enum) {
     next_loop: ?u8,
     assign: struct { variable: u8, value: *const Expression },
     jump: u16,
+    gosub: u16,
+    return_from_subroutine: ?u16,
     branch: struct { condition: *const Expression, target: u16, otherwise: ?u16 },
     close,
     system,
@@ -282,6 +284,11 @@ const Parser = struct {
             return .{ .assign = .{ .variable = index, .value = try self.expression(1) } };
         }
         if (self.take("GOTO")) return .{ .jump = try self.lineNumber() };
+        if (self.take("GOSUB")) return .{ .gosub = try self.lineNumber() };
+        if (self.take("RETURN")) {
+            self.space();
+            return .{ .return_from_subroutine = if (self.rest.len == 0) null else try self.lineNumber() };
+        }
         if (self.take("IF")) {
             const condition = try self.expression(1);
             try self.require("THEN");
@@ -395,6 +402,18 @@ fn emitLine(out: *Writer, lines: []const Line, index: usize) !void {
             try out.print("            continue :dispatch {d};\n        }},\n", .{target});
             return;
         },
+        .gosub => |target| {
+            try out.print("            try runtime.beginSubroutine({d});\n            continue :dispatch {d};\n        }},\n", .{ next, target });
+            return;
+        },
+        .return_from_subroutine => |target| {
+            if (target) |destination| {
+                try out.print("            _ = try runtime.endSubroutine();\n            continue :dispatch {d};\n        }},\n", .{destination});
+            } else {
+                try out.writeAll("            continue :dispatch try runtime.endSubroutine();\n        },\n");
+            }
+            return;
+        },
         .branch => |branch| {
             try out.writeAll("            if (");
             try branch.condition.emit(out);
@@ -438,7 +457,8 @@ fn compile(allocator: Allocator, source: []const u8, out: *Writer, diagnostic: *
     try pairLoops(lines.items, diagnostic);
     for (lines.items) |line| {
         const targets: [2]?u16 = switch (line.statement) {
-            .jump => |target| .{ target, null },
+            .jump, .gosub => |target| .{ target, null },
+            .return_from_subroutine => |target| .{ target, null },
             .branch => |branch| .{ branch.target, branch.otherwise },
             else => continue,
         };
@@ -457,6 +477,7 @@ fn compile(allocator: Allocator, source: []const u8, out: *Writer, diagnostic: *
         \\    var input_buffer: [256]u8 = undefined;
         \\    var runtime: Runtime = .{{
         \\        .io = init.io,
+        \\        .allocator = init.arena.allocator(),
         \\        .stdin = std.Io.File.stdin().readerStreaming(init.io, &input_buffer),
         \\    }};
         \\    defer runtime.release();

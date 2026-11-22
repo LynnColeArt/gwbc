@@ -99,7 +99,7 @@ def native(program, _mode="file"):
 
 def check():
     config = json.loads((ROOT / "ziggify.json").read_text())
-    samples = {name.upper(): (ROOT / name).read_text() for name in ("hours.bas", "reorder.bas")}
+    samples = {name.upper(): (ROOT / name).read_text() for name in ("hours.bas", "reorder.bas", "gcd.bas")}
     for case in config["cases"]:
         for fixture in case["files"]:
             sample = samples.get(fixture["path"])
@@ -116,6 +116,8 @@ def check():
             ("10 FOR I%=1 TO 2\n20 SYSTEM\n", b"FOR without NEXT"),
             ("10 PRINT (2+3\n20 SYSTEM\n", b"InvalidSyntax"),
             ("10 IF 1 THEN 20 ELSE 30\n20 SYSTEM\n", b"jumps to missing line 30"),
+            ("10 GOSUB 40\n20 SYSTEM\n", b"jumps to missing line 40"),
+            ("10 RETURN 40\n20 SYSTEM\n", b"jumps to missing line 40"),
         ]:
             program.write_text(text)
             executable = program.with_suffix("")

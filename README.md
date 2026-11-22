@@ -44,14 +44,25 @@ zig-out/bin/gwbc reorder.bas -o "$DEMO_DIR/reorder"
 printf '14\n50\n10\n' | "$DEMO_DIR/reorder"
 ```
 
+[gcd.bas](gcd.bas) uses nested subroutines to calculate the greatest common
+divisor of two nonnegative integers. For inputs 270 and 192 it prints 6.
+
+```sh
+zig-out/bin/gwbc gcd.bas -o "$DEMO_DIR/gcd"
+printf '270\n192\n' | "$DEMO_DIR/gcd"
+```
+
 ## Supported source
 
 Use printable ASCII with one statement per numbered line and a final
 `SYSTEM`. The compiler supports `REM` and apostrophe comments, signed 16-bit
 integers in one-letter variables such as `I%`, `LET`, `GOTO`, and
-`IF … THEN line [ELSE line]`. It supports
-lexically nested `FOR … TO … [STEP …]` / `NEXT` loops with distinct variables,
-and optional variable names on `NEXT`.
+`IF … THEN line [ELSE line]`. `GOSUB line` supports nested calls with shared
+variables. `RETURN` resumes the most recent caller and `RETURN line` discards
+that call before jumping to the given line. Returning discards loops entered
+inside the subroutine and preserves the caller's active loops. The compiler
+supports lexically nested `FOR … TO … [STEP …]` / `NEXT` loops with distinct
+variables and optional variable names on `NEXT`.
 
 Assignments, `IF`, `PRINT`, and loop bounds and steps accept integer
 expressions. They support parentheses, unary signs, multiplication,
@@ -71,8 +82,16 @@ CRLF, end-of-file markers, and record bytes.
 
 String and floating-point input, comma-separated output zones, trailing
 semicolons on `PRINT`, tokenized and protected program files, MBF arithmetic,
-arrays, subroutines, graphics, sound, and general runtime diagnostic parity
+arrays, graphics, sound, and general runtime diagnostic parity
 remain outside the verified subset.
+
+## Archived program target
+
+Frank Cox's [ISBN checksum utility](https://github.com/robhagemans/hoard-of-gwbasic/blob/d4e65c52d782ba03f69fb15ea7a97a9b13e41bdd/AllBasicCode/ISBN.BAS)
+runs unchanged under the DOS reference. The first native compiler error is
+its string `INPUT`. The listing also needs string variables and functions,
+implicit numeric variables, logical operators, inline `IF` statements, and
+end-of-program handling for listings that return to the interpreter prompt.
 
 ## Replay against the DOS reference
 
@@ -105,5 +124,6 @@ ziggify gate .
 
 `DOSBOX` and `GWBASIC_EXE` can point to absolute paths for local installations.
 The corpus has four transcripts from `hours.bas`, five from `reorder.bas`,
-two focused console cases for loop and expression semantics, and six file cases
-covering strings, integers, branches, line order, and record boundaries.
+two from `gcd.bas`, three focused console cases for loops, expressions and
+subroutine returns, and six file cases covering strings, integers, branches,
+line order, and record boundaries.

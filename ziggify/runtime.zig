@@ -23,10 +23,17 @@ const Runtime = struct {
         }
     };
 
+    const Subroutine = struct {
+        continuation: u16,
+        caller_loops: [26]?Loop,
+    };
+
     io: std.Io,
+    allocator: std.mem.Allocator,
     stdin: std.Io.File.Reader,
     variables: [26]i16 = @splat(0),
     loops: [26]?Loop = @splat(null),
+    subroutines: std.ArrayList(Subroutine) = .empty,
     file: ?std.Io.File = null,
     record: [128]u8 = @splat(0),
     used: usize = 0,
@@ -104,6 +111,19 @@ const Runtime = struct {
         if (loop.includes(value)) return true;
         self.loops[index] = null;
         return false;
+    }
+
+    fn beginSubroutine(self: *Runtime, continuation: u16) !void {
+        try self.subroutines.append(self.allocator, .{ .continuation = continuation, .caller_loops = self.loops });
+        self.loops = @splat(null);
+    }
+
+    fn endSubroutine(self: *Runtime) !u16 {
+        const frame = self.subroutines.pop() orelse return error.ReturnWithoutGosub;
+        // A RETURN discards loops opened in the subroutine. BASIC variables
+        // themselves are shared between the caller and the subroutine.
+        self.loops = frame.caller_loops;
+        return frame.continuation;
     }
 
     fn close(self: *Runtime) !void {

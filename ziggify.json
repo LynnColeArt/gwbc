@@ -459,6 +459,84 @@
       ],
       "body": "",
       "body_base64": false
+    },
+    {
+      "name": "gcd-repeated-nested-calls",
+      "args": [
+        "GCD.BAS",
+        "console"
+      ],
+      "stdin": "270\n192\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "GCD.BAS",
+          "data": "10 PRINT \"GREATEST COMMON DIVISOR\"\n20 INPUT \"FIRST VALUE\"; A%\n30 INPUT \"SECOND VALUE\"; B%\n40 IF A% < 0 THEN 90\n50 IF B% < 0 THEN 90\n60 GOSUB 200\n70 PRINT \"COMMON DIVISOR:\"; A%\n80 GOTO 400\n90 PRINT \"ENTER NONNEGATIVE VALUES\"\n100 GOTO 400\n200 IF B% = 0 THEN 250\n210 GOSUB 300\n220 LET A% = B%\n230 LET B% = R%\n240 GOTO 200\n250 RETURN\n300 LET R% = A% MOD B%\n310 RETURN\n400 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "gcd-zero-second-value",
+      "args": [
+        "GCD.BAS",
+        "console"
+      ],
+      "stdin": "42\n0\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "GCD.BAS",
+          "data": "10 PRINT \"GREATEST COMMON DIVISOR\"\n20 INPUT \"FIRST VALUE\"; A%\n30 INPUT \"SECOND VALUE\"; B%\n40 IF A% < 0 THEN 90\n50 IF B% < 0 THEN 90\n60 GOSUB 200\n70 PRINT \"COMMON DIVISOR:\"; A%\n80 GOTO 400\n90 PRINT \"ENTER NONNEGATIVE VALUES\"\n100 GOTO 400\n200 IF B% = 0 THEN 250\n210 GOSUB 300\n220 LET A% = B%\n230 LET B% = R%\n240 GOTO 200\n250 RETURN\n300 LET R% = A% MOD B%\n310 RETURN\n400 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "subroutine-loop-unwind-and-return-target",
+      "args": [
+        "CALLS.BAS",
+        "console"
+      ],
+      "stdin": "",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "CALLS.BAS",
+          "data": "10 PRINT \"SUBROUTINE LOOPS\"\n20 FOR I%=1 TO 2\n30 GOSUB 100\n40 PRINT \"OUTER\"; I%\n50 NEXT I%\n60 GOSUB 200\n70 PRINT \"INVALID RETURN DESTINATION\"\n80 GOTO 400\n100 LET S%=I%\n110 FOR I%=8 TO 9\n120 PRINT \"INNER\"; I%\n130 LET I%=S%\n140 RETURN\n150 NEXT I%\n200 GOSUB 250\n210 PRINT \"INNER RETURN RESTORED CALLER\"\n220 RETURN 300\n250 PRINT \"NESTED CALL\"\n260 RETURN\n300 PRINT \"RETURN TARGET REACHED\"\n400 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
     }
   ],
   "timeout_ms": 45000,
