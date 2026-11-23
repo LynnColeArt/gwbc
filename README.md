@@ -54,22 +54,24 @@ printf '270\n192\n' | "$DEMO_DIR/gcd"
 
 ## Supported source
 
-Use printable ASCII text or an unprotected GW-BASIC tokenized file with one
-statement per numbered line. Native programs
+Use ASCII text or an unprotected GW-BASIC tokenized file. Numbered lines
+can contain colon-separated statements. ASCII DOS end-of-file markers are
+recognized. Native programs
 finish at end of source, `END`, or `SYSTEM`. The compiler supports `REM` and
 apostrophe comments, assignment with or without `LET`, and `GOTO`.
-`IF … THEN … [ELSE …]` accepts a line number, assignment, or `PRINT` in
-each branch. `GOSUB line` supports nested calls with shared
-variables. `RETURN` resumes the most recent caller and `RETURN line` discards
-that call before jumping to the given line. Returning discards loops entered
+`IF … THEN … [ELSE …]` accepts statement sequences or line targets, and
+nested branches bind `ELSE` to the nearest unmatched `IF`. `GOSUB line`
+supports nested calls with shared variables. `RETURN` resumes after the
+calling statement, even on the same BASIC line. `RETURN line` discards the
+call before jumping to the given line. Returning discards loops entered
 inside the subroutine and preserves the caller's active loops. The compiler
 supports lexically nested `FOR … TO … [STEP …]` / `NEXT` loops with distinct
-variables and optional variable names on `NEXT`.
+variables, optional variable names on `NEXT`, and `WHILE` / `WEND` loops.
 
 Assignments, `IF`, `PRINT`, and loop bounds and steps accept numeric
 expressions. They support parentheses, unary signs, multiplication, division
 (`/`), integer division (`\`), `MOD`, addition and subtraction, comparisons,
-and bitwise `AND` and `OR`. Comparisons produce `-1` when true and `0` when
+and bitwise `NOT`, `AND`, and `OR`. Comparisons produce `-1` when true and `0` when
 false. Unsuffixed and `!` variables use single precision, and `%` variables
 use signed 16-bit integers. Integer addition, subtraction, and multiplication
 promote to single precision when the result exceeds the integer range.
@@ -81,16 +83,21 @@ double precision, and all numeric error transcripts remain outside this slice.
 
 `PRINT` preserves GW-BASIC's numeric spacing and accepts semicolon separators
 and console commas between values. A console comma advances to the next of
-five 14-column print zones, wrapping after the last. `INPUT` reads one value
-into a numeric variable or a `$` string variable. String input trims
-unquoted outer spaces and accepts quoted fields containing commas and
-outer spaces. Both forms support a quoted prompt with the comma or
-semicolon separator. The runtime also supports string concatenation and
-comparison, `LEN`, `MID$(text, start, count)`, `RIGHT$`, and decimal
-prefixes in `VAL`. Native console I/O uses standard streams and LF.
-Sequential file output uses
-`OPEN "OUT.TXT" FOR OUTPUT AS #1`, `PRINT #1,`, and `CLOSE #1` with DOS
-CRLF, end-of-file markers, and record bytes.
+five 14-column print zones, wrapping after the last. `INPUT` accepts a list
+of numeric or string variables, including quoted fields with commas or
+surrounding spaces. It retries a malformed response before assigning any
+fields. `LINE INPUT` keeps the whole response, including quotes, commas,
+and spaces. Native console I/O uses standard streams and LF. The runtime
+also supports string concatenation and comparison, `LEN`,
+`MID$(text, start, count)`, `RIGHT$`, and decimal prefixes in `VAL`.
+
+Sequential files support `OPEN filename FOR INPUT|OUTPUT|APPEND AS #n`
+and the corresponding `OPEN "I"|"O"|"A",#n,filename` forms. Statements take
+literal channel numbers. Use `INPUT #` for fields, `LINE INPUT #` for a line,
+`EOF(n)` to check for end of file, `PRINT #` to write, and `CLOSE` to finish.
+Output uses DOS CRLF, Ctrl-Z, and 128-byte records. Append resumes at the
+existing end-of-file marker. Bare filenames are uppercased as on DOS.
+Explicit host paths retain their casing.
 
 `DATA` holds decimal numbers and quoted or unquoted text. `READ` reads fields
 in BASIC line order into scalars or array elements. `RESTORE` rewinds the
@@ -99,10 +106,11 @@ line. `DIM` declares one-dimensional numeric and string arrays with inclusive
 zero-based bounds. Undimensioned arrays have bounds 0 through 10. Scalars and
 arrays can share a name.
 
-Multiple input fields, file print zones, trailing print separators, protected
-program files, MBF arithmetic, multidimensional arrays, `OPTION BASE`,
-graphics, sound, and general runtime diagnostic parity
-remain outside the verified subset.
+File print zones, trailing print separators, protected program files,
+precise MBF arithmetic, multidimensional arrays, `OPTION BASE`, graphics,
+sound, DOS devices, and general runtime diagnostic parity remain outside the
+verified subset. See the [archive compatibility report](COMPATIBILITY.md)
+for unchanged builds and DOS checks on historical programs.
 
 ## Run Frank Cox's archived ISBN checker
 
@@ -157,9 +165,9 @@ printf '37.5\n' | "$DEMO_DIR/fahrenheit"
 The binary files under [fixtures/tokenized](fixtures/tokenized) are unchanged DOS
 saves. To create an equivalent save, load its ASCII listing in the pinned DOS
 interpreter and run `SAVE "FAHTOK.BAS"` or the corresponding fixture name. The source
-listings are `fahrenheit.bas`, `gcd.bas`, and
+listings are `fahrenheit.bas`, `gcd.bas`,
 `fixtures/tokenized/numbers-source.bas`, `fixtures/tokenized/city-source.bas`,
-and `months.bas`. Ziggify verifies each binary's
+`fixtures/tokenized/flow-source.bas`, and `months.bas`. Ziggify verifies each binary's
 SHA-256 and passes the same file bytes to both implementations.
 
 ## Run a table lookup from a DOS save
@@ -178,6 +186,24 @@ zig-out/bin/gwbc fixtures/tokenized/MONTOK.BAS -o "$DEMO_DIR/months"
 printf '12\n' | "$DEMO_DIR/months"
 ```
 
+## Recover a sequential file from an archived listing
+
+The [customer-record example](fixtures/historical/customer.bas) is the
+eight-line `LINE INPUT#` listing from Microsoft's 1989 manual. It accepts
+a line containing commas and spaces, writes it to `INFO`, closes the file,
+reopens it, and prints the record it reads back.
+
+```sh
+zig build -Doptimize=ReleaseSafe
+DEMO_DIR=$(mktemp -d)
+zig-out/bin/gwbc fixtures/historical/customer.bas -o "$DEMO_DIR/customer"
+(cd "$DEMO_DIR" && printf 'LINDA JONES  234,4  MEMPHIS\n' | ./customer)
+```
+
+Ziggify compares the transcript and the complete `INFO` file, including
+record padding. Separate cases check appending to an existing file and
+appending across a record boundary.
+
 ## Replay against the DOS reference
 
 The reference is T.K. Chia's [2026-10-05 build](https://codeberg.org/tkchia/GW-BASIC/releases/tag/20261005)
@@ -191,8 +217,7 @@ captures ordered text cell writes. The runner converts row changes to LF,
 retains printable bytes including spaces, and appends LF after the last visible
 row. This capture covers short screens of sequential ASCII text, including the
 interpreter's input echo. Terminal control effects and blank lines after the
-last visible row are outside the capture. File fixtures compare complete
-`OUT.TXT` bytes. Ziggify also compares exit status and both output streams.
+last visible row are outside the capture. File fixtures compare every byte of each watched file. Ziggify also compares exit status and both output streams.
 
 Install [Ziggify](https://github.com/LynnColeArt/ziggify/releases/tag/v0.2.0-alpha.1),
 DOSBox, GNU binutils, Python 3, and Zig 0.16.0. Download the archived
@@ -209,10 +234,9 @@ ziggify gate .
 ```
 
 `DOSBOX` and `GWBASIC_EXE` can point to absolute paths for local installations.
-The corpus has four transcripts from `hours.bas`, five from `reorder.bas`,
-two from `gcd.bas`, four from the archived `ISBN.BAS`, four from
-`fahrenheit.bas`, six focused console cases, six file cases, and eight cases
-that run the DOS tokenized saves. The runner
-verifies the archive fixtures' SHA-256. It adapts the converter's line endings
-for DOS and supplies `SYSTEM` after each archived program finishes. The
-interpreter prompt and command echo are outside the program transcript.
+The [replay report](ziggify/replay-report.json) covers 46 cases, including
+the archived ISBN checker, the 1988 Fahrenheit converter, the tokenized city
+table from Microsoft's manual, and its customer-record example. The runner
+verifies the archive fixtures' SHA-256, adapts line endings for DOS, and
+supplies `SYSTEM` after each archived program finishes. The interpreter
+prompt and command echo are outside the program transcript.

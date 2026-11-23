@@ -96,6 +96,144 @@ fn BasicArray(comptime T: type) type {
     };
 }
 
+const FileMode = enum { input, output, append };
+const InputKind = enum { text, integer, single };
+const InputValue = union { text: BasicString, number: Number };
+
+fn inputValue(kind: InputKind, field: []const u8, quoted: bool) !InputValue {
+    if (kind == .text) return .{ .text = try BasicString.fromBytes(field) };
+    if (quoted) return error.InvalidNumber;
+    const value: Number = if (field.len == 0) .{ .integer = 0 } else try Number.parse(field);
+    return .{ .number = try value.convert(kind == .integer) };
+}
+
+const SequentialFile = struct {
+    file: std.Io.File,
+    mode: FileMode,
+    record: [128]u8 = @splat(0),
+    offset: u64 = 0,
+    used: usize = 0,
+    available: usize = 0,
+
+    fn seekAppend(self: *SequentialFile, io: std.Io) !void {
+        while (true) {
+            const count = try self.file.readPositionalAll(io, &self.record, self.offset);
+            if (std.mem.indexOfScalar(u8, self.record[0..count], 0x1a)) |end| {
+                self.used = end;
+                return;
+            }
+            if (count < self.record.len) {
+                self.used = count;
+                return;
+            }
+            self.offset += count;
+        }
+    }
+
+    fn peek(self: *SequentialFile, io: std.Io) !?u8 {
+        if (self.used == self.available) {
+            self.offset += self.available;
+            self.available = try self.file.readPositionalAll(io, &self.record, self.offset);
+            self.used = 0;
+            if (self.available == 0) return null;
+        }
+        const byte = self.record[self.used];
+        return if (byte == 0x1a) null else byte;
+    }
+
+    fn consumeLineBreak(self: *SequentialFile, io: std.Io, byte: u8) !void {
+        self.used += 1;
+        if (byte == '\r' and try self.peek(io) == '\n') self.used += 1;
+    }
+
+    fn readLine(self: *SequentialFile, io: std.Io) !BasicString {
+        if (try self.peek(io) == null) return error.InputPastEnd;
+        var text: [255]u8 = undefined;
+        var length: usize = 0;
+        while (length < text.len) {
+            const byte = try self.peek(io) orelse break;
+            if (byte == '\r' or byte == '\n') {
+                try self.consumeLineBreak(io, byte);
+                break;
+            }
+            text[length] = byte;
+            length += 1;
+            self.used += 1;
+        }
+        return BasicString.fromBytes(text[0..length]);
+    }
+
+    fn readField(self: *SequentialFile, io: std.Io, kind: InputKind) !InputValue {
+        if (try self.peek(io) == null) return error.InputPastEnd;
+        while (try self.peek(io) == ' ') self.used += 1;
+        const quoted = try self.peek(io) == '"';
+        if (quoted) self.used += 1;
+        var text: [255]u8 = undefined;
+        var length: usize = 0;
+        while (try self.peek(io)) |byte| {
+            if (quoted and byte == '"') {
+                self.used += 1;
+                break;
+            }
+            if (!quoted and (byte == ',' or byte == '\r' or byte == '\n' or
+                (kind != .text and byte == ' '))) break;
+            if (length == text.len) return error.StringTooLong;
+            text[length] = byte;
+            length += 1;
+            self.used += 1;
+        }
+        if (quoted or kind != .text) {
+            while (try self.peek(io) == ' ') self.used += 1;
+        }
+        if (try self.peek(io)) |byte| {
+            switch (byte) {
+                ',' => self.used += 1,
+                '\r', '\n' => try self.consumeLineBreak(io, byte),
+                else => if (quoted or kind == .text) return error.InvalidFileField,
+            }
+        }
+        const field = text[0..length];
+        return inputValue(kind, if (quoted) field else std.mem.trimEnd(u8, field, " "), quoted);
+    }
+
+    fn write(self: *SequentialFile, io: std.Io, bytes: []const u8) !void {
+        for (bytes) |byte| {
+            self.record[self.used] = byte;
+            self.used += 1;
+            if (self.used == self.record.len) {
+                try self.file.writePositionalAll(io, &self.record, self.offset);
+                self.offset += self.record.len;
+                self.used = 0;
+            }
+        }
+    }
+};
+
+fn consoleFields(response: []const u8, kinds: []const InputKind, values: []InputValue) !void {
+    var rest = std.mem.trimStart(u8, response, " ");
+    for (kinds, values, 0..) |kind, *value, index| {
+        const quoted = std.mem.startsWith(u8, rest, "\"");
+        const text = if (quoted) blk: {
+            const end = std.mem.indexOfScalarPos(u8, rest, 1, '"') orelse return error.InvalidField;
+            const field = rest[1..end];
+            rest = std.mem.trimStart(u8, rest[end + 1 ..], " ");
+            break :blk field;
+        } else blk: {
+            const end = std.mem.indexOfScalar(u8, rest, ',') orelse rest.len;
+            const field = std.mem.trimEnd(u8, rest[0..end], " ");
+            rest = rest[end..];
+            break :blk field;
+        };
+        value.* = try inputValue(kind, text, quoted);
+        if (index + 1 == kinds.len) {
+            if (rest.len != 0) return error.InvalidField;
+        } else {
+            if (!std.mem.startsWith(u8, rest, ",")) return error.InvalidField;
+            rest = std.mem.trimStart(u8, rest[1..], " ");
+        }
+    }
+}
+
 fn ProgramRuntime(
     comptime numeric_count: usize,
     comptime string_count: usize,
@@ -105,7 +243,7 @@ fn ProgramRuntime(
     return struct {
         const Self = @This();
         const Loop = struct {
-            line: u16,
+            line: usize,
             limit: Number,
             step: Number,
             integer: bool,
@@ -118,7 +256,7 @@ fn ProgramRuntime(
         };
 
         const Subroutine = struct {
-            continuation: u16,
+            continuation: usize,
             caller_loops: [numeric_count]?Loop,
         };
 
@@ -133,9 +271,7 @@ fn ProgramRuntime(
         data_index: usize = 0,
         loops: [numeric_count]?Loop = @splat(null),
         subroutines: std.ArrayList(Subroutine) = .empty,
-        file: ?std.Io.File = null,
-        record: [128]u8 = @splat(0),
-        used: usize = 0,
+        files: [256]?SequentialFile = @splat(null),
         console_column: usize = 0,
 
         fn dimensionNumber(self: *Self, slot: usize, bound: Number, integer: bool) !void {
@@ -178,20 +314,49 @@ fn ProgramRuntime(
             return BasicString.fromBytes((try self.readData()).text);
         }
 
-        fn open(self: *Self) !void {
-            if (self.file != null) return error.FileAlreadyOpen;
-            self.file = try std.Io.Dir.cwd().createFile(self.io, "OUT.TXT", .{});
-            self.record = @splat(0);
-            self.used = 0;
+        fn open(self: *Self, channel: u8, mode: FileMode, name: BasicString) !void {
+            if (self.files[channel] != null) return error.FileAlreadyOpen;
+            const cwd = std.Io.Dir.cwd();
+            const name_bytes = name.bytes();
+            var folded: [255]u8 = undefined;
+            // Bare BASIC filenames follow DOS casing. Explicit host paths
+            // retain their spelling so native utilities can use host files.
+            const path = if (std.mem.indexOfAny(u8, name_bytes, "/\\:") == null)
+                std.ascii.upperString(folded[0..name_bytes.len], name_bytes)
+            else
+                name_bytes;
+            const file = switch (mode) {
+                .input => try cwd.openFile(self.io, path, .{}),
+                .output => try cwd.createFile(self.io, path, .{}),
+                .append => try cwd.createFile(self.io, path, .{ .read = true, .truncate = false }),
+            };
+            errdefer file.close(self.io);
+            var sequential: SequentialFile = .{ .file = file, .mode = mode };
+            if (mode == .append) try sequential.seekAppend(self.io);
+            self.files[channel] = sequential;
         }
 
         fn release(self: *Self) void {
-            if (self.file) |file| file.close(self.io);
-            self.file = null;
+            for (&self.files) |*slot| {
+                if (slot.*) |file| file.file.close(self.io);
+                slot.* = null;
+            }
         }
 
-        fn output(self: *Self, to_file: bool, bytes: []const u8) !void {
-            if (!to_file) {
+        fn fileForInput(self: *Self, channel: u8) !*SequentialFile {
+            const file = if (self.files[channel]) |*file| file else return error.FileNotOpen;
+            if (file.mode != .input) return error.BadFileMode;
+            return file;
+        }
+
+        fn eof(self: *Self, number_value: Number) !Number {
+            const channel = std.math.cast(u8, try number_value.asInteger()) orelse return error.InvalidFileChannel;
+            const file = try self.fileForInput(channel);
+            return .{ .integer = if (try file.peek(self.io) == null) -1 else 0 };
+        }
+
+        fn output(self: *Self, channel: u8, bytes: []const u8) !void {
+            if (channel == 0) {
                 try std.Io.File.stdout().writeStreamingAll(self.io, bytes);
                 if (std.mem.lastIndexOfScalar(u8, bytes, '\n')) |last| {
                     self.console_column = bytes.len - last - 1;
@@ -200,26 +365,20 @@ fn ProgramRuntime(
                 }
                 return;
             }
-            const file = self.file orelse return error.FileNotOpen;
-            for (bytes) |byte| {
-                self.record[self.used] = byte;
-                self.used += 1;
-                if (self.used == self.record.len) {
-                    try file.writeStreamingAll(self.io, &self.record);
-                    self.used = 0;
-                }
-            }
+            const file = if (self.files[channel]) |*file| file else return error.FileNotOpen;
+            if (file.mode == .input) return error.BadFileMode;
+            try file.write(self.io, bytes);
         }
 
-        fn newline(self: *Self, to_file: bool) !void {
-            try self.output(to_file, if (to_file) "\r\n" else "\n");
+        fn newline(self: *Self, channel: u8) !void {
+            try self.output(channel, if (channel != 0) "\r\n" else "\n");
         }
 
         fn printZone(self: *Self) !void {
             const padding = 14 - self.console_column % 14;
             // The DOS console uses five full zones on an 80-column screen.
-            if (self.console_column + padding >= 5 * 14) return self.newline(false);
-            try self.output(false, "              "[0..padding]);
+            if (self.console_column + padding >= 5 * 14) return self.newline(0);
+            try self.output(0, "              "[0..padding]);
         }
 
         fn readNumber(self: *Self, index: usize, integer: bool) Number {
@@ -227,61 +386,69 @@ fn ProgramRuntime(
             return if (integer) value else .{ .single = value.asSingle() };
         }
 
-        fn number(self: *Self, to_file: bool, value: Number) !void {
+        fn number(self: *Self, channel: u8, value: Number) !void {
             var buffer: [24]u8 = undefined;
-            if (value.asSingle() >= 0) try self.output(to_file, " ");
-            try self.output(to_file, try value.display(&buffer));
-            try self.output(to_file, " ");
+            if (value.asSingle() >= 0) try self.output(channel, " ");
+            try self.output(channel, try value.display(&buffer));
+            try self.output(channel, " ");
         }
 
         fn answer(self: *Self, prompt: []const u8, question: bool) ![]const u8 {
             // The terminal supplies its own input echo. Reproduce it for pipes/files.
             const echo = !try std.Io.File.stdin().isTty(self.io);
-            try self.output(false, prompt);
-            if (question) try self.output(false, "? ");
+            try self.output(0, prompt);
+            if (question) try self.output(0, "? ");
             const line = try self.stdin.interface.takeDelimiter('\n') orelse return error.EndOfInput;
             const response = if (std.mem.endsWith(u8, line, "\r")) line[0 .. line.len - 1] else line;
             if (echo) {
-                try self.output(false, response);
-                try self.newline(false);
+                try self.output(0, response);
+                try self.newline(0);
             } else {
                 self.console_column = 0;
             }
             return response;
         }
 
-        fn input(self: *Self, prompt: []const u8, question: bool, integer: bool) !Number {
-            while (true) {
-                const trimmed = std.mem.trim(u8, try self.answer(prompt, question), " ");
-                if (trimmed.len == 0) return (Number{ .integer = 0 }).convert(integer);
-                if (Number.parse(trimmed)) |value| {
-                    return value.convert(integer);
-                } else |err| switch (err) {
-                    error.InvalidNumber => try self.output(false, "?Redo from start\n"),
-                    error.Overflow => return err,
+        fn input(
+            self: *Self,
+            channel: u8,
+            prompt: []const u8,
+            question: bool,
+            comptime whole_line: bool,
+            comptime kinds: []const InputKind,
+        ) ![kinds.len]InputValue {
+            var values: [kinds.len]InputValue = undefined;
+            if (channel != 0) {
+                const file = try self.fileForInput(channel);
+                if (whole_line) {
+                    values[0] = .{ .text = try file.readLine(self.io) };
+                } else {
+                    for (kinds, &values) |kind, *value| value.* = try file.readField(self.io, kind);
                 }
+                return values;
+            }
+            while (true) {
+                const response = try self.answer(prompt, question);
+                if (whole_line) {
+                    values[0] = .{ .text = try BasicString.fromBytes(response) };
+                    return values;
+                }
+                consoleFields(response, kinds, &values) catch |err| switch (err) {
+                    error.InvalidField, error.InvalidNumber => {
+                        try self.output(0, "?Redo from start\n");
+                        continue;
+                    },
+                    else => return err,
+                };
+                return values;
             }
         }
 
-        fn stringInput(self: *Self, prompt: []const u8, question: bool) !BasicString {
-            while (true) {
-                const text = std.mem.trim(u8, try self.answer(prompt, question), " ");
-                if (text.len != 0 and text[0] == '"') {
-                    if (std.mem.indexOfScalarPos(u8, text, 1, '"')) |end| {
-                        if (end + 1 == text.len) return BasicString.fromBytes(text[1..end]);
-                    }
-                } else if (std.mem.indexOfScalar(u8, text, ',') == null) {
-                    return BasicString.fromBytes(text);
-                }
-                try self.output(false, "?Redo from start\n");
-            }
+        fn printString(self: *Self, channel: u8, value: BasicString) !void {
+            try self.output(channel, value.bytes());
         }
 
-        fn printString(self: *Self, to_file: bool, value: BasicString) !void {
-            try self.output(to_file, value.bytes());
-        }
-
-        fn beginLoop(self: *Self, index: usize, line: u16, integer: bool, start: Number, limit: Number, step: Number) !bool {
+        fn beginLoop(self: *Self, index: usize, line: usize, integer: bool, start: Number, limit: Number, step: Number) !bool {
             const loop = Loop{
                 .line = line,
                 .limit = try limit.convert(integer),
@@ -294,7 +461,7 @@ fn ProgramRuntime(
             return enters;
         }
 
-        fn nextLoop(self: *Self, index: usize, line: u16) !bool {
+        fn nextLoop(self: *Self, index: usize, line: usize) !bool {
             const loop = self.loops[index] orelse return error.NextWithoutFor;
             if (loop.line != line) return error.NextWithoutFor;
             const value = try (try Number.binary(.add, self.variables[index], loop.step)).convert(loop.integer);
@@ -304,12 +471,12 @@ fn ProgramRuntime(
             return false;
         }
 
-        fn beginSubroutine(self: *Self, continuation: u16) !void {
+        fn beginSubroutine(self: *Self, continuation: usize) !void {
             try self.subroutines.append(self.allocator, .{ .continuation = continuation, .caller_loops = self.loops });
             self.loops = @splat(null);
         }
 
-        fn endSubroutine(self: *Self) !u16 {
+        fn endSubroutine(self: *Self) !usize {
             const frame = self.subroutines.pop() orelse return error.ReturnWithoutGosub;
             // A RETURN discards loops opened in the subroutine. BASIC variables
             // themselves are shared between the caller and the subroutine.
@@ -317,12 +484,21 @@ fn ProgramRuntime(
             return frame.continuation;
         }
 
-        fn close(self: *Self) !void {
-            const file = self.file orelse return error.FileNotOpen;
-            defer self.release();
-            try self.output(true, "\x1a");
+        fn close(self: *Self, channel: u8) !void {
+            const file = if (self.files[channel]) |*file| file else return;
+            defer {
+                file.file.close(self.io);
+                self.files[channel] = null;
+            }
+            if (file.mode == .input) return;
+            try file.write(self.io, "\x1a");
             // GW-BASIC reuses the last record as the buffer for the next one.
-            if (self.used != 0) try file.writeStreamingAll(self.io, &self.record);
+            if (file.used != 0) try file.file.writePositionalAll(self.io, &file.record, file.offset);
+            try file.file.setLength(self.io, file.offset + if (file.used != 0) file.record.len else 0);
+        }
+
+        fn closeAll(self: *Self) !void {
+            for (1..self.files.len) |channel| try self.close(@intCast(channel));
         }
     };
 }

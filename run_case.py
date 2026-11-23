@@ -17,7 +17,13 @@ TOKENIZED_HASHES = {
     "GCDTOK.BAS": "cb22333a5339fd75e172007afc8d64de53b5526f682d6fe1fc542dadd4498ab2",
     "NUMTOK.BAS": "3804af29827fd3158754454407f5b4e3d775984d66b5ec1ac637fc85f4af947e",
     "CITYTOK.BAS": "08a0de2bc0bf13c78d202eb37c7fd7dddd1e264eeb1761466cc0d0fad0a9bd6d",
+    "FLOWTOK.BAS": "e76b610836de3ee8d034d752540cde0d965261b98079a09eae5f651d36ea4f36",
     "MONTOK.BAS": "667a9689d9016f9cb0de61516b5ad1a4ae80db6d37c9602b5f6128e6ab087180",
+}
+
+
+MANUAL_LISTINGS = {
+    "CUSTOMER.BAS": ("customer.bas", "138944d8ce222dd5d7d0ae61fe600a0630c2892271bb92944c7adbe40e41f711"),
 }
 
 
@@ -28,6 +34,9 @@ def source_path(program):
         source, expected = ROOT / "fahrenheit.bas", FAHRENHEIT_HASH
     elif program in TOKENIZED_HASHES:
         source, expected = ROOT / "fixtures/tokenized" / program, TOKENIZED_HASHES[program]
+    elif program in MANUAL_LISTINGS:
+        filename, expected = MANUAL_LISTINGS[program]
+        source = ROOT / "fixtures/historical" / filename
     else:
         return Path(program)
     if hashlib.sha256(source.read_bytes()).hexdigest() != expected:
@@ -41,9 +50,10 @@ def stage_console(guest, prompt_exit):
     if prompt_exit:
         if keys and not keys.endswith(b"\r"):
             raise ValueError("DOS program input must end with a return before the prompt exit")
-        keys += b"SYSTEM\r"
-    if len(keys) > 256 or any(byte != 13 and not 32 <= byte <= 126 for byte in keys):
+    if len(keys) + (8 if prompt_exit else 0) > 256 or any(byte != 13 and not 32 <= byte <= 126 for byte in keys):
         raise ValueError("console fixture must use at most 256 printable ASCII keystrokes and returns")
+    if prompt_exit:
+        keys += b"\0SYSTEM\r"
     (guest / "KEYS.TXT").write_bytes(keys)
     subprocess.run(["as", "--32", ROOT / "console_oracle.s", "-o", "console.o"], cwd=guest, check=True)
     subprocess.run(
@@ -80,7 +90,7 @@ def console_transcript(trace, prompt_exit):
     return bytes(transcript)
 
 
-def original(program, mode="file"):
+def original(program, mode="file", *watched):
     executable = Path(os.environ.get("GWBASIC_EXE", ROOT / ".ziggify/oracle/GWBASIC.EXE"))
     payload = executable.read_bytes()
     if hashlib.sha256(payload).hexdigest() != ORACLE_HASH:
@@ -90,8 +100,8 @@ def original(program, mode="file"):
         guest = Path(directory)
         (guest / "GWBASIC.EXE").write_bytes(payload)
         source = source_path(program).read_bytes()
-        if program != "ISBN.BAS" and not source.startswith((b"\xff", b"\xfe")):
-            source = b"\r\n".join(source.splitlines()) + b"\r\n"
+        if not source.startswith((b"\xff", b"\xfe")):
+            source = source.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
         (guest / "INPUT.BAS").write_bytes(source)
         command = "gwbasic input.bas"
         console = mode in ("console", "console-end")
@@ -112,14 +122,16 @@ def original(program, mode="file"):
             if not trace.is_file():
                 raise ValueError(f"DOS console launcher failed to capture the program\n{result.stdout.decode(errors='replace')}")
             sys.stdout.buffer.write(console_transcript(trace.read_bytes(), prompt_exit))
-            return
-        output = guest / "OUT.TXT"
-        if not output.is_file():
-            raise ValueError(f"DOS oracle produced no OUT.TXT\n{result.stdout.decode(errors='replace')}")
-        payload = output.read_bytes()
-        if b"\x1a" not in payload or len(payload) % 128:
-            raise ValueError("DOS oracle did not finish writing OUT.TXT")
-        Path("OUT.TXT").write_bytes(payload)
+        for name in watched or (() if console else ("OUT.TXT",)):
+            if Path(name).name != name:
+                raise ValueError("DOS watch requires a file in the working directory")
+            output = guest / name
+            if not output.is_file():
+                raise ValueError(f"DOS oracle produced no {name}\n{result.stdout.decode(errors='replace')}")
+            payload = output.read_bytes()
+            if b"\x1a" not in payload or len(payload) % 128:
+                raise ValueError(f"DOS oracle did not finish writing {name}")
+            Path(name).write_bytes(payload)
 
 
 def build():
@@ -130,7 +142,7 @@ def build():
     )
 
 
-def native(program, _mode="file"):
+def native(program, _mode="file", *_watched):
     with tempfile.TemporaryDirectory(prefix="gwbasic-native-") as directory:
         executable = Path(directory, "program")
         subprocess.run([COMPILER, source_path(program), "-o", executable], check=True)
@@ -163,6 +175,9 @@ def check():
             ('10 LET X%=MID$("text",1,1)\n20 SYSTEM\n', b"TypeMismatch"),
             ('10 IF "text" THEN 20\n20 SYSTEM\n', b"TypeMismatch"),
             ("10 PRINT 12345678\n20 SYSTEM\n", b"UnsupportedDouble"),
+            ("10 WHILE 1:PRINT 1\n20 SYSTEM\n", b"WHILE without WEND"),
+            ("10 WEND:PRINT 1\n20 SYSTEM\n", b"WEND without WHILE"),
+            ("10 LINE INPUT N%\n20 SYSTEM\n", b"TypeMismatch"),
             ("10 DIM A%\n20 SYSTEM\n", b"ExpectedArrayBound"),
             ("10 RESTORE 30\n20 SYSTEM\n", b"restores from missing line 30"),
             (bytes(invalid_links), b"InvalidTokenizedLink"),

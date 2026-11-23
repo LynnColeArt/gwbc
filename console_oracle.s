@@ -130,6 +130,11 @@ video:
     mov dx, word ptr es:[0x450]
     mov word ptr cs:[trace + bx], dx
     mov byte ptr cs:[trace + bx + 2], al
+    /* GW-BASIC writes a trailing 0xff after its direct-mode Ok prompt. */
+    cmp al, 0xff
+    jne video_recorded
+    mov byte ptr cs:[at_prompt], 1
+video_recorded:
     add word ptr cs:[trace_size], 3
     pop dx
     pop es
@@ -149,6 +154,17 @@ keyboard_script:
     mov bx, word ptr cs:[key_index]
     cmp bx, word ptr cs:[key_count]
     jae keyboard_chain
+    /* A zero in the key script delays direct-mode commands until the
+     * program returns to the interpreter. BASIC can poll keys during I/O. */
+    cmp byte ptr cs:[keys + bx], 0
+    jne keyboard_ready
+    cmp byte ptr cs:[at_prompt], 0
+    je keyboard_chain
+    inc bx
+    cmp bx, word ptr cs:[key_count]
+    jae keyboard_chain
+    mov word ptr cs:[key_index], bx
+keyboard_ready:
     test ah, ah
     jnz keyboard_peek
     inc word ptr cs:[key_index]
@@ -165,6 +181,7 @@ keyboard_chain:
     pop bx
     ljmp [cs:keyboard_vector]
 
+at_prompt: .byte 0
 keys_name: .asciz "KEYS.TXT"
 trace_name: .asciz "TRACE.BIN"
 interpreter: .asciz "GWBASIC.EXE"

@@ -112,6 +112,8 @@ const Expression = union(enum) {
     variable: Reference,
     builtin: struct { function: Builtin, args: [3]*const Expression },
     negate: *const Expression,
+    eof: *const Expression,
+    bit_not: *const Expression,
     binary: struct { operation: Operation, left: *const Expression, right: *const Expression },
 
     fn kind(self: Expression) ValueKind {
@@ -120,7 +122,7 @@ const Expression = union(enum) {
             .variable => |reference| reference.variable.kind,
             .builtin => |builtin| builtin.function.kind(),
             .binary => |binary| if (binary.operation == .add) binary.left.kind() else .number,
-            .literal, .negate => .number,
+            .literal, .negate, .eof, .bit_not => .number,
         };
     }
 
@@ -140,6 +142,16 @@ const Expression = union(enum) {
                     try argument.emit(out);
                 }
                 try out.writeAll(if (can_fail) "))" else ")");
+            },
+            .bit_not => |operand| {
+                try out.writeAll("(Number{ .integer = ~(try ");
+                try operand.emit(out);
+                try out.writeAll(".asInteger()) })");
+            },
+            .eof => |channel| {
+                try out.writeAll("(try runtime.eof(");
+                try channel.emit(out);
+                try out.writeAll("))");
             },
             .negate => |operand| {
                 try out.writeAll("(try Number.negate(");
@@ -178,29 +190,20 @@ const Expression = union(enum) {
     }
 };
 
+const FileMode = enum { input, output, append };
 const Print = struct {
     const Item = struct { value: *const Expression, comma_after: bool };
-    file: bool,
+    channel: u8,
     values: []const Item,
 };
 
 const Assignment = struct { target: Reference, value: *const Expression };
 const DataItem = struct { text: []const u8, quoted: bool };
-const BranchAction = union(enum) {
-    jump: u16,
-    assign: Assignment,
-    print: Print,
-
-    fn target(self: BranchAction) ?u16 {
-        return if (self == .jump) self.jump else null;
-    }
-};
-
 const Statement = union(enum) {
     remark,
-    open,
+    open: struct { mode: FileMode, name: *const Expression, channel: u8 },
     print: Print,
-    input: struct { target: Reference, prompt: []const u8, question: bool },
+    input: struct { targets: []const Reference, prompt: []const u8 = "", question: bool = false, whole_line: bool, channel: u8 = 0 },
     data: []const DataItem,
     read: []const Reference,
     dim: []const Reference,
@@ -211,16 +214,24 @@ const Statement = union(enum) {
     jump: u16,
     gosub: u16,
     return_from_subroutine: ?u16,
-    branch: struct { condition: *const Expression, then: BranchAction, otherwise: ?BranchAction },
-    close,
+    branch: struct { condition: *const Expression, false_target: usize },
+    skip: usize,
+    while_loop: *const Expression,
+    wend,
+    close: []const u8,
     system,
 };
 
-const Line = struct {
+const Instruction = struct {
     number: u16,
     statement: Statement,
     loop_partner: ?usize = null,
     restore_index: usize = 0,
+};
+
+const Line = struct {
+    number: u16,
+    statements: []Statement,
 
     fn lessThan(_: void, left: Line, right: Line) bool {
         return left.number < right.number;
@@ -255,7 +266,7 @@ const Parser = struct {
     rest: []const u8,
 
     fn space(self: *Parser) void {
-        self.rest = std.mem.trimStart(u8, self.rest, " ");
+        self.rest = std.mem.trimStart(u8, self.rest, " \t");
     }
 
     fn take(self: *Parser, prefix: []const u8) bool {
@@ -326,6 +337,13 @@ const Parser = struct {
             return value;
         }
         if (self.take("\"")) return self.node(.{ .text = try self.string() });
+        const before_eof = self.rest;
+        if (self.take("EOF") and self.take("(")) {
+            const channel = try self.numericExpression();
+            try self.require(")");
+            return self.node(.{ .eof = channel });
+        }
+        self.rest = before_eof;
         const functions = .{ .{ "LEN", Builtin.length }, .{ "MID$", Builtin.mid }, .{ "RIGHT$", Builtin.right }, .{ "VAL", Builtin.val } };
         inline for (functions) |function| {
             const previous = self.rest;
@@ -352,6 +370,11 @@ const Parser = struct {
 
     fn prefixExpression(self: *Parser) ExpressionError!*const Expression {
         self.space();
+        if (self.take("NOT")) {
+            const operand = try self.expression(3);
+            if (operand.kind() != .number) return error.TypeMismatch;
+            return self.node(.{ .bit_not = operand });
+        }
         // Scan signed literals together so -32768 keeps its integer type.
         const length = Number.scan(self.rest);
         if (length != 0) {
@@ -413,23 +436,28 @@ const Parser = struct {
     fn atElse(self: *Parser) bool {
         const rest = self.rest;
         if (!std.ascii.startsWithIgnoreCase(rest, "ELSE")) return false;
-        return rest.len == 4 or !std.ascii.isAlphanumeric(rest[4]);
+        return rest.len == 4 or !std.ascii.isAlphabetic(rest[4]);
     }
 
-    fn printStatement(self: *Parser, inline_branch: bool) !Print {
-        const file = self.take("#1");
-        if (file) try self.require(",");
+    fn atStatementEnd(self: *Parser) bool {
+        self.space();
+        return self.rest.len == 0 or self.rest[0] == ':' or self.rest[0] == '\'' or self.atElse();
+    }
+
+    fn printStatement(self: *Parser) !Print {
+        const channel = if (self.take("#")) try self.fileChannel() else 0;
+        if (channel != 0) try self.require(",");
         self.space();
         var values: std.ArrayList(Print.Item) = .empty;
-        while (self.rest.len != 0 and !(inline_branch and self.atElse())) {
+        while (!self.atStatementEnd()) {
             const value = try self.expression(1);
             const comma = self.take(",");
-            if (file and comma) return error.UnsupportedFilePrintZone;
+            if (channel != 0 and comma) return error.UnsupportedFilePrintZone;
             try values.append(self.allocator, .{ .value = value, .comma_after = comma });
             if (!comma and !self.take(";")) break;
-            if (self.rest.len == 0 or (inline_branch and self.atElse())) return error.UnsupportedTrailingPrintSeparator;
+            if (self.atStatementEnd()) return error.UnsupportedTrailingPrintSeparator;
         }
-        return .{ .file = file, .values = values.items };
+        return .{ .channel = channel, .values = values.items };
     }
 
     fn assignment(self: *Parser, target: Reference) !Assignment {
@@ -453,9 +481,8 @@ const Parser = struct {
         while (true) {
             const quoted = self.take("\"");
             const text = if (quoted) try self.string() else blk: {
-                const end = std.mem.indexOfScalar(u8, self.rest, ',') orelse self.rest.len;
+                const end = std.mem.indexOfAny(u8, self.rest, ",:") orelse self.rest.len;
                 const value = self.rest[0..end];
-                if (std.mem.indexOfScalar(u8, value, ':') != null) return error.UnsupportedDataSeparator;
                 self.rest = self.rest[end..];
                 break :blk std.mem.trim(u8, value, " ");
             };
@@ -464,15 +491,98 @@ const Parser = struct {
         }
     }
 
-    fn branchAction(self: *Parser) !BranchAction {
+    // A branch owns the remainder of its physical line. Nested IFs consume
+    // their own ELSE first, so an ELSE binds to the nearest unmatched IF.
+    fn sequence(self: *Parser, statements: *std.ArrayList(Statement), allow_else: bool, line_target: bool) anyerror!void {
         self.space();
-        if (self.rest.len != 0 and std.ascii.isDigit(self.rest[0]))
-            return .{ .jump = try self.lineNumber() };
-        if (self.take("PRINT")) return .{ .print = try self.printStatement(true) };
-        _ = self.take("LET");
-        const variable_value = try self.reference();
-        try self.require("=");
-        return .{ .assign = try self.assignment(variable_value) };
+        if (line_target and self.rest.len != 0 and std.ascii.isDigit(self.rest[0])) {
+            try statements.append(self.allocator, .{ .jump = try self.lineNumber() });
+        } else if (self.take("IF")) {
+            const condition = try self.numericExpression();
+            try self.require("THEN");
+            const branch_index = statements.items.len;
+            try statements.append(self.allocator, .{ .branch = .{ .condition = condition, .false_target = undefined } });
+            try self.sequence(statements, true, true);
+            if (self.atElse()) {
+                self.rest = self.rest[4..];
+                const skip = statements.items.len;
+                try statements.append(self.allocator, .{ .skip = undefined });
+                statements.items[branch_index].branch.false_target = skip + 1;
+                try self.sequence(statements, allow_else, true);
+                statements.items[skip].skip = statements.items.len;
+            } else {
+                statements.items[branch_index].branch.false_target = statements.items.len;
+            }
+            return;
+        } else if (!self.atStatementEnd() or (self.rest.len != 0 and self.rest[0] == '\'')) {
+            try statements.append(self.allocator, try self.statement());
+        }
+        if (self.take(":")) return self.sequence(statements, allow_else, false);
+        if (self.rest.len != 0 and self.rest[0] == '\'') {
+            try statements.append(self.allocator, try self.statement());
+        }
+        if (self.rest.len != 0 and !(allow_else and self.atElse())) return error.TrailingInput;
+    }
+
+    fn fileChannel(self: *Parser) !u8 {
+        self.space();
+        const channel = try std.fmt.parseInt(u8, self.digits(), 10);
+        if (channel == 0) return error.InvalidFileChannel;
+        return channel;
+    }
+
+    fn openFile(self: *Parser) !Statement {
+        var name = try self.expression(1);
+        if (name.kind() != .string) return error.TypeMismatch;
+        var mode: FileMode = undefined;
+        var channel: u8 = undefined;
+        if (self.take(",")) {
+            if (name.* != .text) return error.UnsupportedFileMode;
+            const text = name.text;
+            if (text.len != 1) return error.UnsupportedFileMode;
+            mode = switch (std.ascii.toUpper(text[0])) {
+                'I' => .input,
+                'O' => .output,
+                'A' => .append,
+                else => return error.UnsupportedFileMode,
+            };
+            _ = self.take("#");
+            channel = try self.fileChannel();
+            try self.require(",");
+            name = try self.expression(1);
+            if (name.kind() != .string) return error.TypeMismatch;
+        } else {
+            try self.require("FOR");
+            mode = if (self.take("INPUT")) .input else if (self.take("OUTPUT")) .output else if (self.take("APPEND")) .append else return error.UnsupportedFileMode;
+            try self.require("AS");
+            _ = self.take("#");
+            channel = try self.fileChannel();
+        }
+        return .{ .open = .{ .mode = mode, .name = name, .channel = channel } };
+    }
+
+    fn inputStatement(self: *Parser, whole_line: bool) !Statement {
+        var result: Statement = .{ .input = .{ .targets = undefined, .whole_line = whole_line } };
+        const input = &result.input;
+        if (self.take("#")) {
+            input.channel = try self.fileChannel();
+            try self.require(",");
+        } else {
+            input.question = !whole_line;
+            if (self.take("\"")) {
+                input.prompt = try self.string();
+                if (whole_line) {
+                    try self.require(";");
+                } else {
+                    input.question = self.take(";");
+                    if (!input.question) try self.require(",");
+                }
+            }
+        }
+        input.targets = try self.references(false);
+        if (whole_line and (input.targets.len != 1 or input.targets[0].variable.kind != .string))
+            return error.TypeMismatch;
+        return result;
     }
 
     fn statement(self: *Parser) !Statement {
@@ -480,32 +590,19 @@ const Parser = struct {
             self.rest = "";
             return .remark;
         }
-        if (self.take("OPEN")) {
-            try self.require("\"OUT.TXT\"");
-            try self.require("FOR");
-            try self.require("OUTPUT");
-            try self.require("AS");
-            try self.require("#1");
-            return .open;
-        }
-        if (self.take("PRINT")) return .{ .print = try self.printStatement(false) };
+        if (self.take("OPEN")) return self.openFile();
+        if (self.take("PRINT") or self.take("?")) return .{ .print = try self.printStatement() };
         if (self.take("DATA")) return .{ .data = try self.dataItems() };
         if (self.take("READ")) return .{ .read = try self.references(false) };
         if (self.take("DIM")) return .{ .dim = try self.references(true) };
         if (self.take("RESTORE")) {
             self.space();
-            return .{ .restore = if (self.rest.len == 0) null else try self.lineNumber() };
+            return .{ .restore = if (self.atStatementEnd()) null else try self.lineNumber() };
         }
-        if (self.take("INPUT")) {
-            var prompt: []const u8 = "";
-            var question = true;
-            if (self.take("\"")) {
-                prompt = try self.string();
-                question = self.take(";");
-                if (!question) try self.require(",");
-            }
-            return .{ .input = .{ .target = try self.reference(), .prompt = prompt, .question = question } };
-        }
+        if (self.take("INPUT")) return self.inputStatement(false);
+        const before_line = self.rest;
+        if (self.take("LINE") and self.take("INPUT")) return self.inputStatement(true);
+        self.rest = before_line;
         if (self.take("FOR")) {
             const index = try self.numericVariable();
             try self.require("=");
@@ -517,7 +614,7 @@ const Parser = struct {
         }
         if (self.take("NEXT")) {
             self.space();
-            return .{ .next_loop = if (self.rest.len == 0) null else (try self.numericVariable()).slot };
+            return .{ .next_loop = if (self.atStatementEnd()) null else (try self.numericVariable()).slot };
         }
         if (self.take("LET")) {
             const variable_value = try self.reference();
@@ -528,18 +625,20 @@ const Parser = struct {
         if (self.take("GOSUB")) return .{ .gosub = try self.lineNumber() };
         if (self.take("RETURN")) {
             self.space();
-            return .{ .return_from_subroutine = if (self.rest.len == 0) null else try self.lineNumber() };
+            return .{ .return_from_subroutine = if (self.atStatementEnd()) null else try self.lineNumber() };
         }
-        if (self.take("IF")) {
-            const condition = try self.numericExpression();
-            try self.require("THEN");
-            const then = try self.branchAction();
-            const otherwise = if (self.take("ELSE")) try self.branchAction() else null;
-            return .{ .branch = .{ .condition = condition, .then = then, .otherwise = otherwise } };
-        }
+        if (self.take("WHILE")) return .{ .while_loop = try self.numericExpression() };
+        if (self.take("WEND")) return .wend;
         if (self.take("CLOSE")) {
-            try self.require("#1");
-            return .close;
+            var channels: std.ArrayList(u8) = .empty;
+            if (!self.atStatementEnd()) {
+                while (true) {
+                    _ = self.take("#");
+                    try channels.append(self.allocator, try self.fileChannel());
+                    if (!self.take(",")) break;
+                }
+            }
+            return .{ .close = channels.items };
         }
         if (self.take("SYSTEM") or self.take("END")) return .system;
         const variable_value = self.reference() catch |err| switch (err) {
@@ -553,17 +652,18 @@ const Parser = struct {
 
 fn parseLine(allocator: Allocator, names: *Names, source: []const u8) !Line {
     if (source.len > 255) return error.LineTooLong;
-    for (source) |byte| if (byte < ' ' or byte > '~') return error.ExpectedPrintableAscii;
+    for (source) |byte| if (byte != '\t' and (byte < ' ' or byte > '~')) return error.ExpectedPrintableAscii;
     var parser: Parser = .{ .allocator = allocator, .names = names, .rest = source };
     const number = try parser.lineNumber();
-    const statement = try parser.statement();
-    parser.space();
-    if (parser.rest.len != 0) return error.TrailingInput;
-    return .{ .number = number, .statement = statement };
+    var statements: std.ArrayList(Statement) = .empty;
+    try parser.sequence(&statements, false, false);
+    if (statements.items.len == 0) try statements.append(allocator, .remark);
+    return .{ .number = number, .statements = statements.items };
 }
 
-fn pairLoops(allocator: Allocator, lines: []Line, numeric_count: usize, diagnostic: *Writer) !void {
+fn pairLoops(allocator: Allocator, lines: []Instruction, numeric_count: usize, diagnostic: *Writer) !void {
     const stack = try allocator.alloc(usize, numeric_count);
+    var whiles: std.ArrayList(usize) = .empty;
     var depth: usize = 0;
     for (lines, 0..) |*line, index| {
         switch (line.statement) {
@@ -591,6 +691,15 @@ fn pairLoops(allocator: Allocator, lines: []Line, numeric_count: usize, diagnost
                 line.loop_partner = start;
                 lines[start].loop_partner = index;
             },
+            .while_loop => try whiles.append(allocator, index),
+            .wend => {
+                const start = whiles.pop() orelse {
+                    try diagnostic.print("BASIC line {d} has WEND without WHILE\n", .{line.number});
+                    return error.WendWithoutWhile;
+                };
+                line.loop_partner = start;
+                lines[start].loop_partner = index;
+            },
             else => {},
         }
     }
@@ -598,23 +707,21 @@ fn pairLoops(allocator: Allocator, lines: []Line, numeric_count: usize, diagnost
         try diagnostic.print("BASIC line {d} has FOR without NEXT\n", .{lines[stack[depth - 1]].number});
         return error.ForWithoutNext;
     }
-}
-
-const end_of_program: u16 = 65535;
-
-fn following(lines: []const Line, index: usize) u16 {
-    return if (index + 1 < lines.len) lines[index + 1].number else end_of_program;
+    if (whiles.getLastOrNull()) |start| {
+        try diagnostic.print("BASIC line {d} has WHILE without WEND\n", .{lines[start].number});
+        return error.WhileWithoutWend;
+    }
 }
 
 fn emitPrint(out: *Writer, print: Print, indent: []const u8) !void {
     for (print.values) |item| {
         const method = if (item.value.kind() == .number) "number" else "printString";
-        try out.print("{s}try runtime.{s}({}, ", .{ indent, method, print.file });
+        try out.print("{s}try runtime.{s}({d}, ", .{ indent, method, print.channel });
         try item.value.emit(out);
         try out.writeAll(");\n");
         if (item.comma_after) try out.print("{s}try runtime.printZone();\n", .{indent});
     }
-    try out.print("{s}try runtime.newline({});\n", .{ indent, print.file });
+    try out.print("{s}try runtime.newline({d});\n", .{ indent, print.channel });
 }
 
 fn emitAssignment(out: *Writer, assign: Assignment, indent: []const u8) !void {
@@ -627,32 +734,32 @@ fn emitAssignment(out: *Writer, assign: Assignment, indent: []const u8) !void {
     try out.writeAll(";\n");
 }
 
-fn emitBranchAction(out: *Writer, action: BranchAction) !void {
-    const indent = "                ";
-    switch (action) {
-        .jump => |target| try out.print("{s}continue :dispatch {d};\n", .{ indent, target }),
-        .assign => |assign| try emitAssignment(out, assign, indent),
-        .print => |print| try emitPrint(out, print, indent),
-    }
-}
-
-fn emitLine(out: *Writer, lines: []const Line, index: usize) !void {
+fn emitInstruction(out: *Writer, lines: []const Instruction, index: usize, line_targets: std.AutoHashMap(u16, usize)) !void {
     const line = lines[index];
-    const next = following(lines, index);
-    try out.print("        {d} => {{\n", .{line.number});
+    const next = index + 1;
+    try out.print("        {d} => {{\n", .{index});
     switch (line.statement) {
         .remark, .data => {},
-        .open => try out.writeAll("            try runtime.open();\n"),
+        .open => |open| {
+            try out.print("            try runtime.open({d}, .{s}, ", .{ open.channel, @tagName(open.mode) });
+            try open.name.emit(out);
+            try out.writeAll(");\n");
+        },
         .print => |print| try emitPrint(out, print, "            "),
         .input => |input| {
-            const variable = input.target.variable;
-            try out.writeAll("            ");
-            try input.target.emit(out, true);
-            try out.print(" = try runtime.{s}(\"{f}\", {}", .{
-                if (variable.kind == .number) "input" else "stringInput", std.zig.fmtString(input.prompt), input.question,
+            try out.print("            const values = try runtime.input({d}, \"{f}\", {}, {}, &.{{", .{
+                input.channel, std.zig.fmtString(input.prompt), input.question, input.whole_line,
             });
-            if (variable.kind == .number) try out.print(", {}", .{variable.integer});
-            try out.writeAll(");\n");
+            for (input.targets) |target| {
+                const variable = target.variable;
+                try out.print(".{s}, ", .{if (variable.kind == .string) "text" else if (variable.integer) "integer" else "single"});
+            }
+            try out.writeAll("});\n");
+            for (input.targets, 0..) |target, slot| {
+                try out.writeAll("            ");
+                try target.emit(out, true);
+                try out.print(" = values[{d}].{s};\n", .{ slot, if (target.variable.kind == .string) "text" else "number" });
+            }
         },
         .read => |targets| {
             for (targets) |target| {
@@ -677,8 +784,8 @@ fn emitLine(out: *Writer, lines: []const Line, index: usize) !void {
         },
         .restore => try out.print("            runtime.data_index = {d};\n", .{line.restore_index}),
         .for_loop => |loop| {
-            const after = following(lines, line.loop_partner.?);
-            try out.print("            if (!try runtime.beginLoop({d}, {d}, {}, ", .{ loop.variable.slot, line.number, loop.variable.integer });
+            const after = line.loop_partner.? + 1;
+            try out.print("            if (!try runtime.beginLoop({d}, {d}, {}, ", .{ loop.variable.slot, index, loop.variable.integer });
             try loop.start.emit(out);
             try out.writeAll(", ");
             try loop.limit.emit(out);
@@ -689,21 +796,21 @@ fn emitLine(out: *Writer, lines: []const Line, index: usize) !void {
         .next_loop => {
             const start = line.loop_partner.?;
             try out.print("            if (try runtime.nextLoop({d}, {d})) continue :dispatch {d};\n", .{
-                lines[start].statement.for_loop.variable.slot, lines[start].number, lines[start + 1].number,
+                lines[start].statement.for_loop.variable.slot, start, start + 1,
             });
         },
         .assign => |assign| try emitAssignment(out, assign, "            "),
         .jump => |target| {
-            try out.print("            continue :dispatch {d};\n        }},\n", .{target});
+            try out.print("            continue :dispatch {d};\n        }},\n", .{line_targets.get(target).?});
             return;
         },
         .gosub => |target| {
-            try out.print("            try runtime.beginSubroutine({d});\n            continue :dispatch {d};\n        }},\n", .{ next, target });
+            try out.print("            try runtime.beginSubroutine({d});\n            continue :dispatch {d};\n        }},\n", .{ next, line_targets.get(target).? });
             return;
         },
         .return_from_subroutine => |target| {
             if (target) |destination| {
-                try out.print("            _ = try runtime.endSubroutine();\n            continue :dispatch {d};\n        }},\n", .{destination});
+                try out.print("            _ = try runtime.endSubroutine();\n            continue :dispatch {d};\n        }},\n", .{line_targets.get(destination).?});
             } else {
                 try out.writeAll("            continue :dispatch try runtime.endSubroutine();\n        },\n");
             }
@@ -712,21 +819,24 @@ fn emitLine(out: *Writer, lines: []const Line, index: usize) !void {
         .branch => |branch| {
             try out.writeAll("            if (");
             try branch.condition.emit(out);
-            try out.writeAll(".asSingle() != 0) {\n");
-            try emitBranchAction(out, branch.then);
-            if (branch.otherwise) |otherwise| {
-                try out.writeAll("            } else {\n");
-                try emitBranchAction(out, otherwise);
-            }
-            try out.writeAll("            }\n");
-            if (branch.then.target() != null and branch.otherwise != null and branch.otherwise.?.target() != null) {
-                try out.writeAll("        },\n");
-                return;
-            }
+            try out.print(".asSingle() == 0) continue :dispatch {d};\n", .{branch.false_target});
         },
-        .close => try out.writeAll("            try runtime.close();\n"),
+        .skip, .wend => {
+            const destination = if (line.statement == .skip) line.statement.skip else line.loop_partner.?;
+            try out.print("            continue :dispatch {d};\n        }},\n", .{destination});
+            return;
+        },
+        .while_loop => |condition| {
+            try out.writeAll("            if (");
+            try condition.emit(out);
+            try out.print(".asSingle() == 0) continue :dispatch {d};\n", .{line.loop_partner.? + 1});
+        },
+        .close => |channels| {
+            if (channels.len == 0) try out.writeAll("            try runtime.closeAll();\n");
+            for (channels) |channel| try out.print("            try runtime.close({d});\n", .{channel});
+        },
         .system => {
-            try out.writeAll("            if (runtime.file != null) return error.FileStillOpen;\n            return;\n        },\n");
+            try out.writeAll("            try runtime.closeAll();\n            return;\n        },\n");
             return;
         },
     }
@@ -734,15 +844,16 @@ fn emitLine(out: *Writer, lines: []const Line, index: usize) !void {
 }
 
 fn compile(allocator: Allocator, source: []const u8, out: *Writer, diagnostic: *Writer) !void {
-    var rows = std.mem.splitScalar(u8, source, '\n');
-    var lines: std.ArrayList(Line) = .empty;
+    const end = std.mem.indexOfScalar(u8, source, 0x1a) orelse source.len;
+    var rows = std.mem.splitScalar(u8, source[0..end], '\n');
+    var rows_parsed: std.ArrayList(Line) = .empty;
     var numbers = std.AutoHashMap(u16, usize).init(allocator);
     var names: Names = .{};
     var physical_line: usize = 0;
     while (rows.next()) |row| {
         physical_line += 1;
         const source_line = if (std.mem.endsWith(u8, row, "\r")) row[0 .. row.len - 1] else row;
-        if (std.mem.trim(u8, source_line, " ").len == 0) continue;
+        if (std.mem.trim(u8, source_line, " \t").len == 0) continue;
         const line = parseLine(allocator, &names, source_line) catch |err| {
             try diagnostic.print("source row {d}: {s}\n", .{ physical_line, @errorName(err) });
             return err;
@@ -751,37 +862,45 @@ fn compile(allocator: Allocator, source: []const u8, out: *Writer, diagnostic: *
             try diagnostic.print("duplicate BASIC line {d}\n", .{line.number});
             return error.DuplicateLine;
         }
-        try lines.append(allocator, line);
+        try rows_parsed.append(allocator, line);
     }
-    std.mem.sort(Line, lines.items, {}, Line.lessThan);
-    if (lines.items.len == 0) return error.EmptyProgram;
-    try pairLoops(allocator, lines.items, names.numbers.count(), diagnostic);
+    std.mem.sort(Line, rows_parsed.items, {}, Line.lessThan);
+    if (rows_parsed.items.len == 0) return error.EmptyProgram;
+    var lines: std.ArrayList(Instruction) = .empty;
+    var data_indices = std.AutoHashMap(u16, usize).init(allocator);
     var data_count: usize = 0;
-    for (lines.items) |line| {
-        numbers.getPtr(line.number).?.* = data_count;
-        if (line.statement == .data) data_count += line.statement.data.len;
+    for (rows_parsed.items) |row| {
+        const base = lines.items.len;
+        numbers.getPtr(row.number).?.* = base;
+        try data_indices.put(row.number, data_count);
+        for (row.statements) |*statement| {
+            switch (statement.*) {
+                .branch => |*branch| branch.false_target += base,
+                .skip => |*target| target.* += base,
+                .data => |items| data_count += items.len,
+                else => {},
+            }
+            try lines.append(allocator, .{ .number = row.number, .statement = statement.* });
+        }
     }
+    try pairLoops(allocator, lines.items, names.numbers.count(), diagnostic);
     for (lines.items) |*line| {
         if (line.statement == .restore) {
             if (line.statement.restore) |target| {
-                line.restore_index = numbers.get(target) orelse {
+                line.restore_index = data_indices.get(target) orelse {
                     try diagnostic.print("BASIC line {d} restores from missing line {d}\n", .{ line.number, target });
                     return error.UndefinedLine;
                 };
             }
         }
-        const targets: [2]?u16 = switch (line.statement) {
-            .jump, .gosub => |target| .{ target, null },
-            .return_from_subroutine => |target| .{ target, null },
-            .branch => |branch| .{ branch.then.target(), if (branch.otherwise) |otherwise| otherwise.target() else null },
+        const target = switch (line.statement) {
+            .jump, .gosub => |target| target,
+            .return_from_subroutine => |target| target orelse continue,
             else => continue,
         };
-        for (targets) |maybe_target| {
-            const target = maybe_target orelse continue;
-            if (!numbers.contains(target)) {
-                try diagnostic.print("BASIC line {d} jumps to missing line {d}\n", .{ line.number, target });
-                return error.UndefinedLine;
-            }
+        if (!numbers.contains(target)) {
+            try diagnostic.print("BASIC line {d} jumps to missing line {d}\n", .{ line.number, target });
+            return error.UndefinedLine;
         }
     }
     try out.writeAll(@embedFile("numeric.zig"));
@@ -797,7 +916,7 @@ fn compile(allocator: Allocator, source: []const u8, out: *Writer, diagnostic: *
     try out.print(
         \\
         \\pub fn main(init: std.process.Init) !void {{
-        \\    var input_buffer: [256]u8 = undefined;
+        \\    var input_buffer: [512]u8 = undefined;
         \\    var runtime: ProgramRuntime({d}, {d}, {d}, {d}) = .{{
         \\        .io = init.io,
         \\        .allocator = init.arena.allocator(),
@@ -805,19 +924,18 @@ fn compile(allocator: Allocator, source: []const u8, out: *Writer, diagnostic: *
         \\        .data = &program_data,
         \\    }};
         \\    defer runtime.release();
-        \\    dispatch: switch (@as(u16, {d})) {{
+        \\    dispatch: switch (@as(usize, 0)) {{
         \\
     , .{
         names.numbers.count(),       names.strings.count(),
         names.number_arrays.count(), names.string_arrays.count(),
-        lines.items[0].number,
     });
     for (0..lines.items.len) |index| {
-        try emitLine(out, lines.items, index);
+        try emitInstruction(out, lines.items, index, numbers);
     }
     try out.print(
-        "        {d} => {{\n            if (runtime.file != null) return error.FileStillOpen;\n            return;\n        }},\n        else => unreachable,\n    }}\n}}\n",
-        .{end_of_program},
+        "        {d} => {{\n            try runtime.closeAll();\n            return;\n        }},\n        else => unreachable,\n    }}\n}}\n",
+        .{lines.items.len},
     );
 }
 

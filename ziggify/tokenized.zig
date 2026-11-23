@@ -49,11 +49,14 @@ fn keyword(token: u8) ?[]const u8 {
         0x8e => "RETURN",
         0x91 => "PRINT",
         0xa1 => "ELSE",
+        0xb0 => "LINE",
+        0xb2 => "WEND",
         0xba => "OPEN",
         0xbb => "CLOSE",
         0xcc => "TO",
         0xcd => "THEN",
         0xcf => "STEP",
+        0xd3 => "NOT",
         0xee => "AND",
         0xef => "OR",
         0xf3 => "MOD",
@@ -69,6 +72,7 @@ fn extended(page: u8, token: u8) ?[]const u8 {
             0x83 => "MID$",
             0x92 => "LEN",
             0x94 => "VAL",
+            0xa3 => "EOF",
             else => null,
         },
         else => null,
@@ -96,14 +100,16 @@ fn writeWord(out: *Writer, word: []const u8) !void {
 
 fn decodeLine(cursor: *Cursor, out: *Writer) !void {
     var quoted = false;
-    var literal_rest = false;
+    var comment = false;
+    var data = false;
     while (true) {
         const token = try cursor.byte();
         if (token == 0) return;
-        if (quoted or literal_rest) {
+        if (data and !quoted and token == ':') data = false;
+        if (quoted or data or comment) {
             if (token < ' ' or token > '~') return error.NonAsciiTokenizedText;
             try out.writeByte(token);
-            if (!literal_rest and token == '"') quoted = false;
+            if (!comment and token == '"') quoted = !quoted;
             continue;
         }
         // The tokenizer prefixes both ELSE and apostrophe comments with a
@@ -118,7 +124,7 @@ fn decodeLine(cursor: *Cursor, out: *Writer) !void {
             },
             0x20...0x21, 0x23...0x7e => try out.writeByte(token),
             0x8f => {
-                literal_rest = true;
+                comment = true;
                 if (cursor.consume("\xd9")) {
                     try out.writeByte('\'');
                 } else {
@@ -128,7 +134,12 @@ fn decodeLine(cursor: *Cursor, out: *Writer) !void {
             0x84 => {
                 // GW-BASIC leaves DATA fields in their original text form.
                 try writeWord(out, "DATA");
-                literal_rest = true;
+                data = true;
+            },
+            0xb1 => {
+                // DOS stores a synthetic plus after WHILE, then the expression.
+                if (!cursor.consume("\xe9")) return error.InvalidTokenizedWhile;
+                try writeWord(out, "WHILE");
             },
             0x0b, 0x0c, 0x1c => try out.print("{d}", .{@as(i16, @bitCast(try cursor.word()))}),
             0x0e => try out.print("{d}", .{try cursor.word()}),

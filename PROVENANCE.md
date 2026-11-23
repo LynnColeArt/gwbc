@@ -71,3 +71,17 @@ is a separate test dependency. The replay runner checks its SHA-256 before use.
   that listing. The reference also documents `DATA`, `READ`, `RESTORE`,
   `DIM`, and console print zones. DOS runs supplied the tested output.
   https://www.bitsavers.org/pdf/microsoft/gw-basic/410130013-320-R01-0686_Microsoft_GW-BASIC_Interpreter_Users_Reference_1986.pdf
+
+- `fixtures/historical/customer.bas` transcribes the eight numbered lines
+  of the `LINE INPUT#` example in Microsoft's 1989 GW-BASIC User's Guide and
+  Reference, printed page 184. The DOS session supplies the expected
+  transcript and full `INFO` file. Chapter 5 describes sequential files
+  and append mode.
+  https://bitsavers.trailing-edge.com/pdf/microsoft/gw-basic/Microsoft_GW-BASIC_Users_Guide_and_Reference_1989.pdf#page=190
+- `FLOWTOK.BAS` is a DOS `SAVE` of the project's
+  `fixtures/tokenized/flow-source.bas`. It exercises colon-separated
+  statements, inline `IF`, `WHILE` / `WEND`, and a subroutine return. The
+  saved byte sequence identifies the synthetic plus token after `WHILE`.
+- The [archive survey](COMPATIBILITY.md) uses the unchanged `.BAS` files
+  in `AllBasicCode` at the same pinned hoard-of-gwbasic revision as the ISBN
+  test. The broader archive remains an external dependency.

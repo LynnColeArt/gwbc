@@ -935,6 +935,190 @@
       ],
       "body": "",
       "body_base64": false
+    },
+    {
+      "name": "tokenized-inline-control-flow",
+      "args": [
+        "FLOWTOK.BAS",
+        "console-end"
+      ],
+      "stdin": "",
+      "stdin_base64": false,
+      "env": [],
+      "files": [],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "nested-inline-branches",
+      "args": [
+        "INLINE.BAS",
+        "console"
+      ],
+      "stdin": "",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "INLINE.BAS",
+          "data": "10 FOR I%=0 TO 2\n20 IF I%=0 THEN IF 0 THEN PRINT \"WRONG\" ELSE PRINT \"INNER\":PRINT \"INNER TAIL\" ELSE PRINT \"OUTER\":PRINT I%\n30 NEXT I%:PRINT \"FINISHED\"\n40 WHILE 0:PRINT \"NEVER\":WHILE 1:PRINT \"ALSO NEVER\":WEND:WEND:PRINT \"SKIPPED\"\n50 IF 0 THEN PRINT \"NO\":PRINT \"NO TAIL\"\n60 PRINT \"COLON:\" ' IGNORE:PRINT \"COMMENT\"\n70 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "console-input-fields-and-line",
+      "args": [
+        "FIELDS.BAS",
+        "console"
+      ],
+      "stdin": "invalid\n\"A,B\",6\n   X,Y  \n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "FIELDS.BAS",
+          "data": "10 INPUT \"ENTER\";A$,B%\n20 PRINT A$;B%\n30 LINE INPUT \"LINE\";A$\n40 PRINT A$\n50 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "manual-customer-record",
+      "args": [
+        "CUSTOMER.BAS",
+        "console-end",
+        "INFO"
+      ],
+      "stdin": "LINDA JONES  234,4  MEMPHIS\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [],
+      "watch": [
+        "INFO"
+      ],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "sequential-append-and-read",
+      "args": [
+        "APPTEST.BAS",
+        "file",
+        "OUT.TXT",
+        "COPY.TXT"
+      ],
+      "stdin": "",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "APPTEST.BAS",
+          "data": "10 OPEN \"OUT.TXT\" FOR OUTPUT AS #1\n20 PRINT #1,\"FIRST\"\n30 CLOSE #1\n40 OPEN \"OUT.TXT\" FOR APPEND AS #1\n50 PRINT #1,\"SECOND\"\n60 CLOSE #1\n70 OPEN \"OUT.TXT\" FOR INPUT AS #1\n80 OPEN \"COPY.TXT\" FOR OUTPUT AS #2\n90 WHILE NOT EOF(1):LINE INPUT #1,L$:PRINT #2,L$:WEND\n100 CLOSE\n110 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [
+        "OUT.TXT",
+        "COPY.TXT"
+      ],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "sequential-input-fields",
+      "args": [
+        "INPUTF.BAS",
+        "file",
+        "OUT.TXT"
+      ],
+      "stdin": "",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "INPUTF.BAS",
+          "data": "10 OPEN \"O\",1,\"DATA\"\n20 PRINT #1,\"  ALPHA, 7\":PRINT #1,\"BETA,-2\"\n30 CLOSE 1\n40 OPEN \"I\",1,\"DATA\":OPEN \"O\",2,\"OUT.TXT\"\n50 WHILE NOT EOF(1):INPUT #1,N$,I%:PRINT #2,N$;I%:WEND\n60 CLOSE 1,2\n70 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [
+        "OUT.TXT"
+      ],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "sequential-append-record-boundary",
+      "args": [
+        "BOUND.BAS",
+        "file",
+        "OUT.TXT"
+      ],
+      "stdin": "",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "BOUND.BAS",
+          "data": "10 OPEN \"OUT.TXT\" FOR APPEND AS #1\n20 FOR I%=1 TO 18:PRINT #1,\"ABCDEF\":NEXT\n30 CLOSE #1\n40 OPEN \"A\",1,\"OUT.TXT\":PRINT #1,\"AFTER\":CLOSE #1\n50 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [
+        "OUT.TXT"
+      ],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
     }
   ],
   "timeout_ms": 45000,

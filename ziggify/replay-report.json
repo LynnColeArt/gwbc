@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "passed": 39,
-  "total": 39,
+  "passed": 46,
+  "total": 46,
   "fallbacks": 0,
   "shadow_mismatches": 0,
   "cases": [
@@ -841,6 +841,194 @@
         "stdout": "IDMgIDAgLTMgWyBhLGIgXVtVTlFVT1RFRF1bMTIzXQogMyAtMi41CiAzIApBICAgICAgICAgICAgIEIgICAgICAgICAgICAgQyAgICAgICAgICAgICBEICAgICAgICAgICAgIEUKRiAgICAgICAgICAgICBHCg==",
         "stderr": "",
         "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "tokenized-inline-control-flow",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "T1RIRVI6ClRXTzoKT1RIRVI6CiAxNSAKRDpBVEEK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "T1RIRVI6ClRXTzoKT1RIRVI6CiAxNSAKRDpBVEEK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "nested-inline-branches",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "SU5ORVIKSU5ORVIgVEFJTApPVVRFUgogMSAKT1VURVIKIDIgCkZJTklTSEVEClNLSVBQRUQKQ09MT046Cg==",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "SU5ORVIKSU5ORVIgVEFJTApPVVRFUgogMSAKT1VURVIKIDIgCkZJTklTSEVEClNLSVBQRUQKQ09MT046Cg==",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "console-input-fields-and-line",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "RU5URVI/IGludmFsaWQKP1JlZG8gZnJvbSBzdGFydApFTlRFUj8gIkEsQiIsNgpBLEIgNiAKTElORSAgIFgsWSAgCiAgIFgsWSAgCg==",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "RU5URVI/IGludmFsaWQKP1JlZG8gZnJvbSBzdGFydApFTlRFUj8gIkEsQiIsNgpBLEIgNiAKTElORSAgIFgsWSAgCiAgIFgsWSAgCg==",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "manual-customer-record",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "Q1VTVE9NRVIgSU5GT1JNQVRJT04/TElOREEgSk9ORVMgIDIzNCw0ICBNRU1QSElTCkxJTkRBIEpPTkVTICAyMzQsNCAgTUVNUEhJUwo=",
+        "stderr": "",
+        "files": [
+          {
+            "path": "INFO",
+            "data": "TElOREEgSk9ORVMgIDIzNCw0ICBNRU1QSElTDQoaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+          }
+        ],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "Q1VTVE9NRVIgSU5GT1JNQVRJT04/TElOREEgSk9ORVMgIDIzNCw0ICBNRU1QSElTCkxJTkRBIEpPTkVTICAyMzQsNCAgTUVNUEhJUwo=",
+        "stderr": "",
+        "files": [
+          {
+            "path": "INFO",
+            "data": "TElOREEgSk9ORVMgIDIzNCw0ICBNRU1QSElTDQoaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+          }
+        ],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "sequential-append-and-read",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "",
+        "stderr": "",
+        "files": [
+          {
+            "path": "OUT.TXT",
+            "data": "RklSU1QNClNFQ09ORA0KGgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+          },
+          {
+            "path": "COPY.TXT",
+            "data": "RklSU1QNClNFQ09ORA0KGgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+          }
+        ],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "",
+        "stderr": "",
+        "files": [
+          {
+            "path": "OUT.TXT",
+            "data": "RklSU1QNClNFQ09ORA0KGgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+          },
+          {
+            "path": "COPY.TXT",
+            "data": "RklSU1QNClNFQ09ORA0KGgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+          }
+        ],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "sequential-input-fields",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "",
+        "stderr": "",
+        "files": [
+          {
+            "path": "OUT.TXT",
+            "data": "QUxQSEEgNyANCkJFVEEtMiANChoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+          }
+        ],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "",
+        "stderr": "",
+        "files": [
+          {
+            "path": "OUT.TXT",
+            "data": "QUxQSEEgNyANCkJFVEEtMiANChoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+          }
+        ],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "sequential-append-record-boundary",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "",
+        "stderr": "",
+        "files": [
+          {
+            "path": "OUT.TXT",
+            "data": "QUJDREVGDQpBQkNERUYNCkFCQ0RFRg0KQUJDREVGDQpBQkNERUYNCkFCQ0RFRg0KQUJDREVGDQpBQkNERUYNCkFCQ0RFRg0KQUJDREVGDQpBQkNERUYNCkFCQ0RFRg0KQUJDREVGDQpBQkNERUYNCkFCQ0RFRg0KQUJDREVGDQpBQkNERUYNCkFCQ0RFRg0KQUZURVINChpBQkNERUYNCkFCQ0RFRg0KQUJDREVGDQpBQkNERUYNCkFCQ0RFRg0KQUJDREVGDQpBQkNERUYNCkFCQ0RFRg0KQUJDREVGDQpBQkNERUYNCkFCQ0RFRg0KQUJDREVGDQpBQkNERUYNCg=="
+          }
+        ],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "",
+        "stderr": "",
+        "files": [
+          {
+            "path": "OUT.TXT",
+            "data": "QUJDREVGDQpBQkNERUYNCkFCQ0RFRg0KQUJDREVGDQpBQkNERUYNCkFCQ0RFRg0KQUJDREVGDQpBQkNERUYNCkFCQ0RFRg0KQUJDREVGDQpBQkNERUYNCkFCQ0RFRg0KQUJDREVGDQpBQkNERUYNCkFCQ0RFRg0KQUJDREVGDQpBQkNERUYNCkFCQ0RFRg0KQUZURVINChpBQkNERUYNCkFCQ0RFRg0KQUJDREVGDQpBQkNERUYNCkFCQ0RFRg0KQUJDREVGDQpBQkNERUYNCkFCQ0RFRg0KQUJDREVGDQpBQkNERUYNCkFCQ0RFRg0KQUJDREVGDQpBQkNERUYNCg=="
+          }
+        ],
         "fallbacks": 0,
         "shadow_mismatches": 0
       }
