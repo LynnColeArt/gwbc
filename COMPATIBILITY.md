@@ -5,7 +5,8 @@ The archive survey built **2 of 37** unchanged listings from the top level
 of [AllBasicCode](https://github.com/robhagemans/hoard-of-gwbasic/tree/d4e65c52d782ba03f69fb15ea7a97a9b13e41bdd/AllBasicCode).
 The previous revision built 1 of the same 37. The directory includes games
 and DOS-specific programs. Compiler diagnostics show the first stopping point
-for each listing. [Previous revision](https://github.com/LynnColeArt/gwbc/commit/94a42495eacf605d70bf50403ece1bb1027671a5)
+for each listing. The [roadmap](ROADMAP.md) uses these results to choose
+which programs to recover next. [Previous revision](https://github.com/LynnColeArt/gwbc/commit/94a42495eacf605d70bf50403ece1bb1027671a5)
 
 ## DOS-verified historical listings
 
