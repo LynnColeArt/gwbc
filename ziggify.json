@@ -829,6 +829,112 @@
       ],
       "body": "",
       "body_base64": false
+    },
+    {
+      "name": "tokenized-manual-city-table",
+      "args": [
+        "CITYTOK.BAS",
+        "console-end"
+      ],
+      "stdin": "",
+      "stdin_base64": false,
+      "env": [],
+      "files": [],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "tokenized-month-first-entry",
+      "args": [
+        "MONTOK.BAS",
+        "console"
+      ],
+      "stdin": "1\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "tokenized-month-last-entry",
+      "args": [
+        "MONTOK.BAS",
+        "console"
+      ],
+      "stdin": "12\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "tokenized-month-invalid-choice",
+      "args": [
+        "MONTOK.BAS",
+        "console"
+      ],
+      "stdin": "0\n",
+      "stdin_base64": false,
+      "env": [],
+      "files": [],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
+    },
+    {
+      "name": "data-and-array-semantics",
+      "args": [
+        "ARRAYS.BAS",
+        "console"
+      ],
+      "stdin": "",
+      "stdin_base64": false,
+      "env": [],
+      "files": [
+        {
+          "path": "ARRAYS.BAS",
+          "data": "10 DIM N%(2),S$(2)\n20 READ N%(0),N%(2),S$(0),S$(2),S$\n30 PRINT N%(0);N%(1);N%(2);\"[\";S$(0);\"][\";S$(2);\"][\";S$;\"]\"\n40 RESTORE 100\n50 READ N%,Q$\n60 PRINT N%;Q$\n70 RESTORE\n80 READ N%\n90 PRINT N%\n95 PRINT \"A\",\"B\",\"C\",\"D\",\"E\",\"F\",\"G\"\n100 REM RESTORE CAN LAND HERE\n105 DATA 2.5,-2.5,\" a,b \",UNQUOTED,123\n110 SYSTEM\n",
+          "base64": false
+        }
+      ],
+      "watch": [],
+      "method": "GET",
+      "path": "/",
+      "headers": [],
+      "response_headers": [
+        "content-type"
+      ],
+      "body": "",
+      "body_base64": false
     }
   ],
   "timeout_ms": 45000,

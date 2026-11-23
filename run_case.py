@@ -16,6 +16,8 @@ TOKENIZED_HASHES = {
     "FAHTOK.BAS": "8def4bef27868225cd930b10c607392f6c64451034d6b11590b803f386c1e464",
     "GCDTOK.BAS": "cb22333a5339fd75e172007afc8d64de53b5526f682d6fe1fc542dadd4498ab2",
     "NUMTOK.BAS": "3804af29827fd3158754454407f5b4e3d775984d66b5ec1ac637fc85f4af947e",
+    "CITYTOK.BAS": "08a0de2bc0bf13c78d202eb37c7fd7dddd1e264eeb1761466cc0d0fad0a9bd6d",
+    "MONTOK.BAS": "667a9689d9016f9cb0de61516b5ad1a4ae80db6d37c9602b5f6128e6ab087180",
 }
 
 
@@ -161,6 +163,8 @@ def check():
             ('10 LET X%=MID$("text",1,1)\n20 SYSTEM\n', b"TypeMismatch"),
             ('10 IF "text" THEN 20\n20 SYSTEM\n', b"TypeMismatch"),
             ("10 PRINT 12345678\n20 SYSTEM\n", b"UnsupportedDouble"),
+            ("10 DIM A%\n20 SYSTEM\n", b"ExpectedArrayBound"),
+            ("10 RESTORE 30\n20 SYSTEM\n", b"restores from missing line 30"),
             (bytes(invalid_links), b"InvalidTokenizedLink"),
             (b"\xff\x01", b"TruncatedTokenizedProgram"),
             (b"\xff\x01\x09\x0a\x00\x91\x1d\x00\x00", b"TruncatedTokenizedProgram"),

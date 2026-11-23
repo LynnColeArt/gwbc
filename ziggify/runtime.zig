@@ -69,7 +69,39 @@ const BasicString = struct {
     }
 };
 
-fn ProgramRuntime(comptime numeric_count: usize, comptime string_count: usize) type {
+const DataItem = struct { text: []const u8, quoted: bool };
+
+fn BasicArray(comptime T: type) type {
+    return struct {
+        const Self = @This();
+        elements: ?[]T = null,
+
+        fn dimension(self: *Self, allocator: std.mem.Allocator, upper_bound: i16, initial: T) !void {
+            if (self.elements != null) return error.RedimensionedArray;
+            if (upper_bound < 0) return error.SubscriptOutOfRange;
+            const elements = try allocator.alloc(T, @as(usize, @intCast(upper_bound)) + 1);
+            @memset(elements, initial);
+            self.elements = elements;
+        }
+
+        fn element(self: *Self, allocator: std.mem.Allocator, subscript: Number, initial: T) !*T {
+            const index = try subscript.asInteger();
+            if (index < 0 or (self.elements == null and index > 10)) return error.SubscriptOutOfRange;
+            if (self.elements == null) try self.dimension(allocator, 10, initial);
+            const elements = self.elements.?;
+            const offset: usize = @intCast(index);
+            if (offset >= elements.len) return error.SubscriptOutOfRange;
+            return &elements[offset];
+        }
+    };
+}
+
+fn ProgramRuntime(
+    comptime numeric_count: usize,
+    comptime string_count: usize,
+    comptime numeric_arrays: usize,
+    comptime string_arrays: usize,
+) type {
     return struct {
         const Self = @This();
         const Loop = struct {
@@ -95,11 +127,56 @@ fn ProgramRuntime(comptime numeric_count: usize, comptime string_count: usize) t
         stdin: std.Io.File.Reader,
         variables: [numeric_count]Number = @splat(.{ .integer = 0 }),
         strings: [string_count]BasicString = @splat(.{}),
+        number_arrays: [numeric_arrays]BasicArray(Number) = @splat(.{}),
+        text_arrays: [string_arrays]BasicArray(BasicString) = @splat(.{}),
+        data: []const DataItem,
+        data_index: usize = 0,
         loops: [numeric_count]?Loop = @splat(null),
         subroutines: std.ArrayList(Subroutine) = .empty,
         file: ?std.Io.File = null,
         record: [128]u8 = @splat(0),
         used: usize = 0,
+        console_column: usize = 0,
+
+        fn dimensionNumber(self: *Self, slot: usize, bound: Number, integer: bool) !void {
+            const initial: Number = if (integer) .{ .integer = 0 } else .{ .single = 0 };
+            try self.number_arrays[slot].dimension(self.allocator, try bound.asInteger(), initial);
+        }
+
+        fn dimensionString(self: *Self, slot: usize, bound: Number) !void {
+            try self.text_arrays[slot].dimension(self.allocator, try bound.asInteger(), .{});
+        }
+
+        fn numberElement(self: *Self, slot: usize, subscript: Number, integer: bool) !*Number {
+            const initial: Number = if (integer) .{ .integer = 0 } else .{ .single = 0 };
+            return self.number_arrays[slot].element(self.allocator, subscript, initial);
+        }
+
+        fn stringElement(self: *Self, slot: usize, subscript: Number) !*BasicString {
+            return self.text_arrays[slot].element(self.allocator, subscript, .{});
+        }
+
+        fn readData(self: *Self) !DataItem {
+            if (self.data_index == self.data.len) return error.OutOfData;
+            const item = self.data[self.data_index];
+            self.data_index += 1;
+            return item;
+        }
+
+        fn readDataNumber(self: *Self, integer: bool) !Number {
+            const item = try self.readData();
+            if (item.quoted) return error.TypeMismatch;
+            if (item.text.len == 0) return (Number{ .integer = 0 }).convert(integer);
+            const value = Number.parse(item.text) catch |err| switch (err) {
+                error.InvalidNumber => return error.TypeMismatch,
+                else => return err,
+            };
+            return value.convert(integer);
+        }
+
+        fn readDataString(self: *Self) !BasicString {
+            return BasicString.fromBytes((try self.readData()).text);
+        }
 
         fn open(self: *Self) !void {
             if (self.file != null) return error.FileAlreadyOpen;
@@ -114,7 +191,15 @@ fn ProgramRuntime(comptime numeric_count: usize, comptime string_count: usize) t
         }
 
         fn output(self: *Self, to_file: bool, bytes: []const u8) !void {
-            if (!to_file) return std.Io.File.stdout().writeStreamingAll(self.io, bytes);
+            if (!to_file) {
+                try std.Io.File.stdout().writeStreamingAll(self.io, bytes);
+                if (std.mem.lastIndexOfScalar(u8, bytes, '\n')) |last| {
+                    self.console_column = bytes.len - last - 1;
+                } else {
+                    self.console_column += bytes.len;
+                }
+                return;
+            }
             const file = self.file orelse return error.FileNotOpen;
             for (bytes) |byte| {
                 self.record[self.used] = byte;
@@ -128,6 +213,13 @@ fn ProgramRuntime(comptime numeric_count: usize, comptime string_count: usize) t
 
         fn newline(self: *Self, to_file: bool) !void {
             try self.output(to_file, if (to_file) "\r\n" else "\n");
+        }
+
+        fn printZone(self: *Self) !void {
+            const padding = 14 - self.console_column % 14;
+            // The DOS console uses five full zones on an 80-column screen.
+            if (self.console_column + padding >= 5 * 14) return self.newline(false);
+            try self.output(false, "              "[0..padding]);
         }
 
         fn readNumber(self: *Self, index: usize, integer: bool) Number {
@@ -152,6 +244,8 @@ fn ProgramRuntime(comptime numeric_count: usize, comptime string_count: usize) t
             if (echo) {
                 try self.output(false, response);
                 try self.newline(false);
+            } else {
+                self.console_column = 0;
             }
             return response;
         }

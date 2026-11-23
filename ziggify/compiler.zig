@@ -19,13 +19,39 @@ const Names = struct {
     const Key = [41]u8;
     numbers: std.AutoHashMapUnmanaged(Key, usize) = .empty,
     strings: std.AutoHashMapUnmanaged(Key, usize) = .empty,
+    number_arrays: std.AutoHashMapUnmanaged(Key, usize) = .empty,
+    string_arrays: std.AutoHashMapUnmanaged(Key, usize) = .empty,
 
-    fn intern(self: *Names, allocator: Allocator, key: Key, kind: ValueKind) !Variable {
-        const table = if (kind == .number) &self.numbers else &self.strings;
+    fn intern(self: *Names, allocator: Allocator, key: Key, array: bool) !Variable {
+        const kind: ValueKind = if (key[0] == '$') .string else .number;
+        const table = switch (kind) {
+            .number => if (array) &self.number_arrays else &self.numbers,
+            .string => if (array) &self.string_arrays else &self.strings,
+        };
         const count = table.count();
         const entry = try table.getOrPut(allocator, key);
         if (!entry.found_existing) entry.value_ptr.* = count;
         return .{ .kind = kind, .slot = entry.value_ptr.*, .integer = key[0] == '%' };
+    }
+};
+
+const Reference = struct {
+    variable: Variable,
+    subscript: ?*const Expression = null,
+
+    fn emit(self: Reference, out: *Writer, writable: bool) Writer.Error!void {
+        const variable = self.variable;
+        if (self.subscript) |index| {
+            const method = if (variable.kind == .number) "numberElement" else "stringElement";
+            try out.print("(try runtime.{s}({d}, ", .{ method, variable.slot });
+            try index.emit(out);
+            if (variable.kind == .number) try out.print(", {}", .{variable.integer});
+            try out.writeAll(")).*");
+        } else if (variable.kind == .number and !writable) {
+            try out.print("runtime.readNumber({d}, {})", .{ variable.slot, variable.integer });
+        } else {
+            try out.print("runtime.{s}[{d}]", .{ variable.field(), variable.slot });
+        }
     }
 };
 
@@ -83,7 +109,7 @@ const Builtin = enum {
 const Expression = union(enum) {
     literal: Number,
     text: []const u8,
-    variable: Variable,
+    variable: Reference,
     builtin: struct { function: Builtin, args: [3]*const Expression },
     negate: *const Expression,
     binary: struct { operation: Operation, left: *const Expression, right: *const Expression },
@@ -91,7 +117,7 @@ const Expression = union(enum) {
     fn kind(self: Expression) ValueKind {
         return switch (self) {
             .text => .string,
-            .variable => |variable| variable.kind,
+            .variable => |reference| reference.variable.kind,
             .builtin => |builtin| builtin.function.kind(),
             .binary => |binary| if (binary.operation == .add) binary.left.kind() else .number,
             .literal, .negate => .number,
@@ -105,13 +131,7 @@ const Expression = union(enum) {
                 .single => |single| try out.print("(Number{{ .single = @bitCast(@as(u32, {d})) }})", .{@as(u32, @bitCast(single))}),
             },
             .text => |value| try out.print("(try BasicString.fromBytes(\"{f}\"))", .{std.zig.fmtString(value)}),
-            .variable => |variable| {
-                if (variable.kind == .number) {
-                    try out.print("runtime.readNumber({d}, {})", .{ variable.slot, variable.integer });
-                } else {
-                    try out.print("runtime.strings[{d}]", .{variable.slot});
-                }
-            },
+            .variable => |reference| try reference.emit(out, false),
             .builtin => |builtin| {
                 const can_fail = builtin.function != .length;
                 try out.print("{s}BasicString.{s}(", .{ if (can_fail) "(try " else "", @tagName(builtin.function) });
@@ -159,11 +179,13 @@ const Expression = union(enum) {
 };
 
 const Print = struct {
+    const Item = struct { value: *const Expression, comma_after: bool };
     file: bool,
-    values: []const *const Expression,
+    values: []const Item,
 };
 
-const Assignment = struct { variable: Variable, value: *const Expression };
+const Assignment = struct { target: Reference, value: *const Expression };
+const DataItem = struct { text: []const u8, quoted: bool };
 const BranchAction = union(enum) {
     jump: u16,
     assign: Assignment,
@@ -178,7 +200,11 @@ const Statement = union(enum) {
     remark,
     open,
     print: Print,
-    input: struct { variable: Variable, prompt: []const u8, question: bool },
+    input: struct { target: Reference, prompt: []const u8, question: bool },
+    data: []const DataItem,
+    read: []const Reference,
+    dim: []const Reference,
+    restore: ?u16,
     for_loop: struct { variable: Variable, start: *const Expression, limit: *const Expression, step: *const Expression },
     next_loop: ?usize,
     assign: Assignment,
@@ -194,6 +220,7 @@ const Line = struct {
     number: u16,
     statement: Statement,
     loop_partner: ?usize = null,
+    restore_index: usize = 0,
 
     fn lessThan(_: void, left: Line, right: Line) bool {
         return left.number < right.number;
@@ -256,7 +283,7 @@ const Parser = struct {
         return number;
     }
 
-    fn variable(self: *Parser) ExpressionError!Variable {
+    fn variableName(self: *Parser) ExpressionError!Names.Key {
         self.space();
         if (self.rest.len == 0 or !std.ascii.isAlphabetic(self.rest[0])) return error.ExpectedVariable;
         var end: usize = 1;
@@ -268,11 +295,20 @@ const Parser = struct {
             canonical.* = std.ascii.toUpper(byte);
         }
         self.rest = self.rest[end + @intFromBool(suffix != 0) ..];
-        return self.names.intern(self.allocator, key, if (suffix == '$') .string else .number);
+        return key;
+    }
+
+    fn reference(self: *Parser) ExpressionError!Reference {
+        const key = try self.variableName();
+        if (!self.take("("))
+            return .{ .variable = try self.names.intern(self.allocator, key, false) };
+        const subscript = try self.numericExpression();
+        try self.require(")");
+        return .{ .variable = try self.names.intern(self.allocator, key, true), .subscript = subscript };
     }
 
     fn numericVariable(self: *Parser) ExpressionError!Variable {
-        const result = try self.variable();
+        const result = try self.names.intern(self.allocator, try self.variableName(), false);
         if (result.kind != .number) return error.TypeMismatch;
         return result;
     }
@@ -297,7 +333,7 @@ const Parser = struct {
             self.rest = previous;
         }
         if (self.rest.len != 0 and std.ascii.isAlphabetic(self.rest[0]))
-            return self.node(.{ .variable = try self.variable() });
+            return self.node(.{ .variable = try self.reference() });
         return error.InvalidNumber;
     }
 
@@ -384,19 +420,48 @@ const Parser = struct {
         const file = self.take("#1");
         if (file) try self.require(",");
         self.space();
-        var values: std.ArrayList(*const Expression) = .empty;
+        var values: std.ArrayList(Print.Item) = .empty;
         while (self.rest.len != 0 and !(inline_branch and self.atElse())) {
-            try values.append(self.allocator, try self.expression(1));
-            if (!self.take(";")) break;
-            if (self.rest.len == 0 or (inline_branch and self.atElse())) return error.UnsupportedTrailingSemicolon;
+            const value = try self.expression(1);
+            const comma = self.take(",");
+            if (file and comma) return error.UnsupportedFilePrintZone;
+            try values.append(self.allocator, .{ .value = value, .comma_after = comma });
+            if (!comma and !self.take(";")) break;
+            if (self.rest.len == 0 or (inline_branch and self.atElse())) return error.UnsupportedTrailingPrintSeparator;
         }
         return .{ .file = file, .values = values.items };
     }
 
-    fn assignment(self: *Parser, variable_value: Variable) !Assignment {
+    fn assignment(self: *Parser, target: Reference) !Assignment {
         const value = try self.expression(1);
-        if (value.kind() != variable_value.kind) return error.TypeMismatch;
-        return .{ .variable = variable_value, .value = value };
+        if (value.kind() != target.variable.kind) return error.TypeMismatch;
+        return .{ .target = target, .value = value };
+    }
+
+    fn references(self: *Parser, require_subscript: bool) ![]const Reference {
+        var values: std.ArrayList(Reference) = .empty;
+        while (true) {
+            const target = try self.reference();
+            if (require_subscript and target.subscript == null) return error.ExpectedArrayBound;
+            try values.append(self.allocator, target);
+            if (!self.take(",")) return values.items;
+        }
+    }
+
+    fn dataItems(self: *Parser) ![]const DataItem {
+        var items: std.ArrayList(DataItem) = .empty;
+        while (true) {
+            const quoted = self.take("\"");
+            const text = if (quoted) try self.string() else blk: {
+                const end = std.mem.indexOfScalar(u8, self.rest, ',') orelse self.rest.len;
+                const value = self.rest[0..end];
+                if (std.mem.indexOfScalar(u8, value, ':') != null) return error.UnsupportedDataSeparator;
+                self.rest = self.rest[end..];
+                break :blk std.mem.trim(u8, value, " ");
+            };
+            try items.append(self.allocator, .{ .text = text, .quoted = quoted });
+            if (!self.take(",")) return items.items;
+        }
     }
 
     fn branchAction(self: *Parser) !BranchAction {
@@ -405,7 +470,7 @@ const Parser = struct {
             return .{ .jump = try self.lineNumber() };
         if (self.take("PRINT")) return .{ .print = try self.printStatement(true) };
         _ = self.take("LET");
-        const variable_value = try self.variable();
+        const variable_value = try self.reference();
         try self.require("=");
         return .{ .assign = try self.assignment(variable_value) };
     }
@@ -424,6 +489,13 @@ const Parser = struct {
             return .open;
         }
         if (self.take("PRINT")) return .{ .print = try self.printStatement(false) };
+        if (self.take("DATA")) return .{ .data = try self.dataItems() };
+        if (self.take("READ")) return .{ .read = try self.references(false) };
+        if (self.take("DIM")) return .{ .dim = try self.references(true) };
+        if (self.take("RESTORE")) {
+            self.space();
+            return .{ .restore = if (self.rest.len == 0) null else try self.lineNumber() };
+        }
         if (self.take("INPUT")) {
             var prompt: []const u8 = "";
             var question = true;
@@ -432,7 +504,7 @@ const Parser = struct {
                 question = self.take(";");
                 if (!question) try self.require(",");
             }
-            return .{ .input = .{ .variable = try self.variable(), .prompt = prompt, .question = question } };
+            return .{ .input = .{ .target = try self.reference(), .prompt = prompt, .question = question } };
         }
         if (self.take("FOR")) {
             const index = try self.numericVariable();
@@ -448,7 +520,7 @@ const Parser = struct {
             return .{ .next_loop = if (self.rest.len == 0) null else (try self.numericVariable()).slot };
         }
         if (self.take("LET")) {
-            const variable_value = try self.variable();
+            const variable_value = try self.reference();
             try self.require("=");
             return .{ .assign = try self.assignment(variable_value) };
         }
@@ -470,7 +542,7 @@ const Parser = struct {
             return .close;
         }
         if (self.take("SYSTEM") or self.take("END")) return .system;
-        const variable_value = self.variable() catch |err| switch (err) {
+        const variable_value = self.reference() catch |err| switch (err) {
             error.ExpectedVariable => return error.UnsupportedStatement,
             else => |other| return other,
         };
@@ -535,22 +607,23 @@ fn following(lines: []const Line, index: usize) u16 {
 }
 
 fn emitPrint(out: *Writer, print: Print, indent: []const u8) !void {
-    for (print.values) |value| {
-        const method = if (value.kind() == .number) "number" else "printString";
+    for (print.values) |item| {
+        const method = if (item.value.kind() == .number) "number" else "printString";
         try out.print("{s}try runtime.{s}({}, ", .{ indent, method, print.file });
-        try value.emit(out);
+        try item.value.emit(out);
         try out.writeAll(");\n");
+        if (item.comma_after) try out.print("{s}try runtime.printZone();\n", .{indent});
     }
     try out.print("{s}try runtime.newline({});\n", .{ indent, print.file });
 }
 
 fn emitAssignment(out: *Writer, assign: Assignment, indent: []const u8) !void {
-    try out.print("{s}runtime.{s}[{d}] = {s}", .{
-        indent,                                              assign.variable.field(), assign.variable.slot,
-        if (assign.variable.kind == .number) "try " else "",
-    });
+    const variable = assign.target.variable;
+    try out.writeAll(indent);
+    try assign.target.emit(out, true);
+    try out.writeAll(if (variable.kind == .number) " = try " else " = ");
     try assign.value.emit(out);
-    if (assign.variable.kind == .number) try out.print(".convert({})", .{assign.variable.integer});
+    if (variable.kind == .number) try out.print(".convert({})", .{variable.integer});
     try out.writeAll(";\n");
 }
 
@@ -568,18 +641,41 @@ fn emitLine(out: *Writer, lines: []const Line, index: usize) !void {
     const next = following(lines, index);
     try out.print("        {d} => {{\n", .{line.number});
     switch (line.statement) {
-        .remark => {},
+        .remark, .data => {},
         .open => try out.writeAll("            try runtime.open();\n"),
         .print => |print| try emitPrint(out, print, "            "),
         .input => |input| {
-            try out.print("            runtime.{s}[{d}] = try runtime.{s}(\"{f}\", {}", .{
-                input.variable.field(),                                         input.variable.slot,
-                if (input.variable.kind == .number) "input" else "stringInput", std.zig.fmtString(input.prompt),
-                input.question,
+            const variable = input.target.variable;
+            try out.writeAll("            ");
+            try input.target.emit(out, true);
+            try out.print(" = try runtime.{s}(\"{f}\", {}", .{
+                if (variable.kind == .number) "input" else "stringInput", std.zig.fmtString(input.prompt), input.question,
             });
-            if (input.variable.kind == .number) try out.print(", {}", .{input.variable.integer});
+            if (variable.kind == .number) try out.print(", {}", .{variable.integer});
             try out.writeAll(");\n");
         },
+        .read => |targets| {
+            for (targets) |target| {
+                try out.writeAll("            ");
+                try target.emit(out, true);
+                if (target.variable.kind == .number) {
+                    try out.print(" = try runtime.readDataNumber({});\n", .{target.variable.integer});
+                } else {
+                    try out.writeAll(" = try runtime.readDataString();\n");
+                }
+            }
+        },
+        .dim => |targets| {
+            for (targets) |target| {
+                const variable = target.variable;
+                const method = if (variable.kind == .number) "dimensionNumber" else "dimensionString";
+                try out.print("            try runtime.{s}({d}, ", .{ method, variable.slot });
+                try target.subscript.?.emit(out);
+                if (variable.kind == .number) try out.print(", {}", .{variable.integer});
+                try out.writeAll(");\n");
+            }
+        },
+        .restore => try out.print("            runtime.data_index = {d};\n", .{line.restore_index}),
         .for_loop => |loop| {
             const after = following(lines, line.loop_partner.?);
             try out.print("            if (!try runtime.beginLoop({d}, {d}, {}, ", .{ loop.variable.slot, line.number, loop.variable.integer });
@@ -640,7 +736,7 @@ fn emitLine(out: *Writer, lines: []const Line, index: usize) !void {
 fn compile(allocator: Allocator, source: []const u8, out: *Writer, diagnostic: *Writer) !void {
     var rows = std.mem.splitScalar(u8, source, '\n');
     var lines: std.ArrayList(Line) = .empty;
-    var numbers = std.AutoHashMap(u16, void).init(allocator);
+    var numbers = std.AutoHashMap(u16, usize).init(allocator);
     var names: Names = .{};
     var physical_line: usize = 0;
     while (rows.next()) |row| {
@@ -660,7 +756,20 @@ fn compile(allocator: Allocator, source: []const u8, out: *Writer, diagnostic: *
     std.mem.sort(Line, lines.items, {}, Line.lessThan);
     if (lines.items.len == 0) return error.EmptyProgram;
     try pairLoops(allocator, lines.items, names.numbers.count(), diagnostic);
+    var data_count: usize = 0;
     for (lines.items) |line| {
+        numbers.getPtr(line.number).?.* = data_count;
+        if (line.statement == .data) data_count += line.statement.data.len;
+    }
+    for (lines.items) |*line| {
+        if (line.statement == .restore) {
+            if (line.statement.restore) |target| {
+                line.restore_index = numbers.get(target) orelse {
+                    try diagnostic.print("BASIC line {d} restores from missing line {d}\n", .{ line.number, target });
+                    return error.UndefinedLine;
+                };
+            }
+        }
         const targets: [2]?u16 = switch (line.statement) {
             .jump, .gosub => |target| .{ target, null },
             .return_from_subroutine => |target| .{ target, null },
@@ -677,19 +786,32 @@ fn compile(allocator: Allocator, source: []const u8, out: *Writer, diagnostic: *
     }
     try out.writeAll(@embedFile("numeric.zig"));
     try out.writeAll(@embedFile("runtime.zig"));
+    try out.writeAll("\nconst program_data = [_]DataItem{\n");
+    for (lines.items) |line| {
+        if (line.statement != .data) continue;
+        for (line.statement.data) |item| {
+            try out.print("    .{{ .text = \"{f}\", .quoted = {} }},\n", .{ std.zig.fmtString(item.text), item.quoted });
+        }
+    }
+    try out.writeAll("};\n");
     try out.print(
         \\
         \\pub fn main(init: std.process.Init) !void {{
         \\    var input_buffer: [256]u8 = undefined;
-        \\    var runtime: ProgramRuntime({d}, {d}) = .{{
+        \\    var runtime: ProgramRuntime({d}, {d}, {d}, {d}) = .{{
         \\        .io = init.io,
         \\        .allocator = init.arena.allocator(),
         \\        .stdin = std.Io.File.stdin().readerStreaming(init.io, &input_buffer),
+        \\        .data = &program_data,
         \\    }};
         \\    defer runtime.release();
         \\    dispatch: switch (@as(u16, {d})) {{
         \\
-    , .{ names.numbers.count(), names.strings.count(), lines.items[0].number });
+    , .{
+        names.numbers.count(),       names.strings.count(),
+        names.number_arrays.count(), names.string_arrays.count(),
+        lines.items[0].number,
+    });
     for (0..lines.items.len) |index| {
         try emitLine(out, lines.items, index);
     }

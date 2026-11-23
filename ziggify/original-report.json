@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "passed": 34,
-  "total": 34,
+  "passed": 39,
+  "total": 39,
   "fallbacks": 0,
   "shadow_mismatches": 0,
   "cases": [
@@ -739,6 +739,106 @@
       "actual": {
         "termination": "exit:0",
         "stdout": "TlVNQkVSUzogSUYgVEhFTiBFTFNFCiAyNTUgIDI1NiAgMzI3NjcgLTMyNzY4ICAyLjUgIDFFLTA4IApWQUxVRT8gMi41CiAyLjUgCg==",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "tokenized-manual-city-table",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "CkNJVFkgICAgICAgICAgU1RBVEUgICAgICAgICBaSVAKREVOVkVSLCAgICAgICBDT0xPUkFETyAgICAgICA4MDIxMSAK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "CkNJVFkgICAgICAgICAgU1RBVEUgICAgICAgICBaSVAKREVOVkVSLCAgICAgICBDT0xPUkFETyAgICAgICA4MDIxMSAK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "tokenized-month-first-entry",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "TU9OVEggTEVOR1RIIExPT0tVUApNT05USCAoMS0xMik/IDEKSkFOVUFSWSBEQVlTOiAzMSAKQ0FMRU5EQVI6IENPTU1PTiBZRUFSCg==",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "TU9OVEggTEVOR1RIIExPT0tVUApNT05USCAoMS0xMik/IDEKSkFOVUFSWSBEQVlTOiAzMSAKQ0FMRU5EQVI6IENPTU1PTiBZRUFSCg==",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "tokenized-month-last-entry",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "TU9OVEggTEVOR1RIIExPT0tVUApNT05USCAoMS0xMik/IDEyCkRFQ0VNQkVSIERBWVM6IDMxIApDQUxFTkRBUjogQ09NTU9OIFlFQVIK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "TU9OVEggTEVOR1RIIExPT0tVUApNT05USCAoMS0xMik/IDEyCkRFQ0VNQkVSIERBWVM6IDMxIApDQUxFTkRBUjogQ09NTU9OIFlFQVIK",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "tokenized-month-invalid-choice",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "TU9OVEggTEVOR1RIIExPT0tVUApNT05USCAoMS0xMik/IDAKTU9OVEggT1VUIE9GIFJBTkdFCg==",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "TU9OVEggTEVOR1RIIExPT0tVUApNT05USCAoMS0xMik/IDAKTU9OVEggT1VUIE9GIFJBTkdFCg==",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      }
+    },
+    {
+      "name": "data-and-array-semantics",
+      "passed": true,
+      "expected": {
+        "termination": "exit:0",
+        "stdout": "IDMgIDAgLTMgWyBhLGIgXVtVTlFVT1RFRF1bMTIzXQogMyAtMi41CiAzIApBICAgICAgICAgICAgIEIgICAgICAgICAgICAgQyAgICAgICAgICAgICBEICAgICAgICAgICAgIEUKRiAgICAgICAgICAgICBHCg==",
+        "stderr": "",
+        "files": [],
+        "fallbacks": 0,
+        "shadow_mismatches": 0
+      },
+      "actual": {
+        "termination": "exit:0",
+        "stdout": "IDMgIDAgLTMgWyBhLGIgXVtVTlFVT1RFRF1bMTIzXQogMyAtMi41CiAzIApBICAgICAgICAgICAgIEIgICAgICAgICAgICAgQyAgICAgICAgICAgICBEICAgICAgICAgICAgIEUKRiAgICAgICAgICAgICBHCg==",
         "stderr": "",
         "files": [],
         "fallbacks": 0,

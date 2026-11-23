@@ -79,8 +79,9 @@ seven-digit display. The replay cases cover ordinary decimal calculations and
 formatting. Bit-for-bit Microsoft Binary Format arithmetic, underflow edges,
 double precision, and all numeric error transcripts remain outside this slice.
 
-`PRINT` supports newline-terminated strings and numbers separated by
-semicolons and preserves GW-BASIC's numeric spacing. `INPUT` reads one value
+`PRINT` preserves GW-BASIC's numeric spacing and accepts semicolon separators
+and console commas between values. A console comma advances to the next of
+five 14-column print zones, wrapping after the last. `INPUT` reads one value
 into a numeric variable or a `$` string variable. String input trims
 unquoted outer spaces and accepts quoted fields containing commas and
 outer spaces. Both forms support a quoted prompt with the comma or
@@ -91,9 +92,16 @@ Sequential file output uses
 `OPEN "OUT.TXT" FOR OUTPUT AS #1`, `PRINT #1,`, and `CLOSE #1` with DOS
 CRLF, end-of-file markers, and record bytes.
 
-Multiple input fields, comma-separated output zones, trailing
-semicolons on `PRINT`, protected program files, MBF arithmetic,
-arrays, graphics, sound, and general runtime diagnostic parity
+`DATA` holds decimal numbers and quoted or unquoted text. `READ` reads fields
+in BASIC line order into scalars or array elements. `RESTORE` rewinds the
+cursor. `RESTORE line` resumes at the first `DATA` on or after that existing
+line. `DIM` declares one-dimensional numeric and string arrays with inclusive
+zero-based bounds. Undimensioned arrays have bounds 0 through 10. Scalars and
+arrays can share a name.
+
+Multiple input fields, file print zones, trailing print separators, protected
+program files, MBF arithmetic, multidimensional arrays, `OPTION BASE`,
+graphics, sound, and general runtime diagnostic parity
 remain outside the verified subset.
 
 ## Run Frank Cox's archived ISBN checker
@@ -146,12 +154,29 @@ zig-out/bin/gwbc fixtures/tokenized/FAHTOK.BAS -o "$DEMO_DIR/fahrenheit"
 printf '37.5\n' | "$DEMO_DIR/fahrenheit"
 ```
 
-The three files under [fixtures/tokenized](fixtures/tokenized) are unchanged DOS
+The binary files under [fixtures/tokenized](fixtures/tokenized) are unchanged DOS
 saves. To create an equivalent save, load its ASCII listing in the pinned DOS
 interpreter and run `SAVE "FAHTOK.BAS"` or the corresponding fixture name. The source
 listings are `fahrenheit.bas`, `gcd.bas`, and
-`fixtures/tokenized/numbers-source.bas`. Ziggify verifies each binary's
+`fixtures/tokenized/numbers-source.bas`, `fixtures/tokenized/city-source.bas`,
+and `months.bas`. Ziggify verifies each binary's
 SHA-256 and passes the same file bytes to both implementations.
+
+## Run a table lookup from a DOS save
+
+[CITYTOK.BAS](fixtures/tokenized/CITYTOK.BAS) is a DOS save of the city table
+example in the 1986 Microsoft GW-BASIC Interpreter User's Reference. It reads
+a quoted comma, a state name, and a numeric ZIP code from `DATA`. The companion
+[MONTOK.BAS](fixtures/tokenized/MONTOK.BAS) uses numeric and string arrays to
+look up month lengths for a common year. Its transcript exercises both forms
+of `RESTORE`. [Microsoft reference, printed page 39](https://www.bitsavers.org/pdf/microsoft/gw-basic/410130013-320-R01-0686_Microsoft_GW-BASIC_Interpreter_Users_Reference_1986.pdf)
+
+```sh
+zig build -Doptimize=ReleaseSafe
+DEMO_DIR=$(mktemp -d)
+zig-out/bin/gwbc fixtures/tokenized/MONTOK.BAS -o "$DEMO_DIR/months"
+printf '12\n' | "$DEMO_DIR/months"
+```
 
 ## Replay against the DOS reference
 
@@ -186,7 +211,7 @@ ziggify gate .
 `DOSBOX` and `GWBASIC_EXE` can point to absolute paths for local installations.
 The corpus has four transcripts from `hours.bas`, five from `reorder.bas`,
 two from `gcd.bas`, four from the archived `ISBN.BAS`, four from
-`fahrenheit.bas`, five focused console cases, six file cases, and four cases
+`fahrenheit.bas`, six focused console cases, six file cases, and eight cases
 that run the DOS tokenized saves. The runner
 verifies the archive fixtures' SHA-256. It adapts the converter's line endings
 for DOS and supplies `SYSTEM` after each archived program finishes. The

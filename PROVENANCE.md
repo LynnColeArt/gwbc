@@ -65,3 +65,9 @@ is a separate test dependency. The replay runner checks its SHA-256 before use.
   https://github.com/microsoft/GW-BASIC/blob/master/IBMRES.ASM
   https://github.com/microsoft/GW-BASIC/blob/master/GWMAIN.ASM
   https://github.com/microsoft/GW-BASIC/blob/master/GWLIST.ASM
+- `fixtures/tokenized/city-source.bas` transcribes the city table example
+  from the 1986 Microsoft GW-BASIC Interpreter User's Reference, printed page
+  39. `CITYTOK.BAS` is the unmodified binary produced by DOS `SAVE` from
+  that listing. The reference also documents `DATA`, `READ`, `RESTORE`,
+  `DIM`, and console print zones. DOS runs supplied the tested output.
+  https://www.bitsavers.org/pdf/microsoft/gw-basic/410130013-320-R01-0686_Microsoft_GW-BASIC_Interpreter_Users_Reference_1986.pdf

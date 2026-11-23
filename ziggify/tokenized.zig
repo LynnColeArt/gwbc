@@ -39,9 +39,12 @@ fn keyword(token: u8) ?[]const u8 {
         0x82 => "FOR",
         0x83 => "NEXT",
         0x85 => "INPUT",
+        0x86 => "DIM",
+        0x87 => "READ",
         0x88 => "LET",
         0x89 => "GOTO",
         0x8b => "IF",
+        0x8c => "RESTORE",
         0x8d => "GOSUB",
         0x8e => "RETURN",
         0x91 => "PRINT",
@@ -93,14 +96,14 @@ fn writeWord(out: *Writer, word: []const u8) !void {
 
 fn decodeLine(cursor: *Cursor, out: *Writer) !void {
     var quoted = false;
-    var comment = false;
+    var literal_rest = false;
     while (true) {
         const token = try cursor.byte();
         if (token == 0) return;
-        if (quoted or comment) {
+        if (quoted or literal_rest) {
             if (token < ' ' or token > '~') return error.NonAsciiTokenizedText;
             try out.writeByte(token);
-            if (!comment and token == '"') quoted = false;
+            if (!literal_rest and token == '"') quoted = false;
             continue;
         }
         // The tokenizer prefixes both ELSE and apostrophe comments with a
@@ -115,12 +118,17 @@ fn decodeLine(cursor: *Cursor, out: *Writer) !void {
             },
             0x20...0x21, 0x23...0x7e => try out.writeByte(token),
             0x8f => {
-                comment = true;
+                literal_rest = true;
                 if (cursor.consume("\xd9")) {
                     try out.writeByte('\'');
                 } else {
                     try writeWord(out, "REM");
                 }
+            },
+            0x84 => {
+                // GW-BASIC leaves DATA fields in their original text form.
+                try writeWord(out, "DATA");
+                literal_rest = true;
             },
             0x0b, 0x0c, 0x1c => try out.print("{d}", .{@as(i16, @bitCast(try cursor.word()))}),
             0x0e => try out.print("{d}", .{try cursor.word()}),
